@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.0.0
+# Version 1.1.0
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -31,6 +31,7 @@ class frontControllerApplication
 			'url' => 'admin.html',
 			'tab' => 'Admin',
 			'administrator' => true,
+			'restrictedAdministrator' => true,
 		),
 		'administrators' => array (
 			'description' => 'Add/remove/list administrators',
@@ -38,6 +39,7 @@ class frontControllerApplication
 			'administrator' => true,
 			'parent' => 'admin',
 			'subtab' => 'Administrators',
+			'restrictedAdministrator' => true,
 		),
 		'history' => array (
 			'description' => 'History of changes made',
@@ -45,10 +47,21 @@ class frontControllerApplication
 			'administrator' => true,
 			'parent' => 'admin',
 			'subtab' => 'History',
+			'restrictedAdministrator' => true,
 		),
 		'login' => array (
 			'description' => 'Login',
 			'url' => 'login.html',
+			'usetab' => 'home',
+		),
+		'externallogin' => array (
+			'description' => 'Friends login',
+			'url' => 'externallogin.html',
+			'usetab' => 'home',
+		),
+		'externallogout' => array (
+			'description' => 'Friends logout',
+			'url' => 'externallogout.html',
 			'usetab' => 'home',
 		),
 		'loggedout' => array (
@@ -155,6 +168,12 @@ class frontControllerApplication
 		$this->administrators = $this->getAdministrators ();
 		$this->userIsAdministrator = $this->userIsAdministrator ();
 		
+		# Determine the administrator privilege level if the database table supports this
+		$this->restrictedAdministrator = NULL;
+		if ($this->userIsAdministrator) {
+			$this->restrictedAdministrator = ((isSet ($this->administrators[$this->user]['privilege']) && ($this->administrators[$this->user]['privilege'] == 'Restricted administrator')) ? true : NULL);
+		}
+		
 		# Get the available actions
 		$this->actions = $this->assignActions ();
 		
@@ -215,8 +234,10 @@ class frontControllerApplication
 		if (!$this->login ()) {return false;}
 		
 		# Show login status
-		if (!$external) {
-			$headerHtml = '<p class="loggedinas">' . ($this->user ? 'You are logged in as: <strong>' . $this->user . ($this->userIsAdministrator ? ' (ADMIN)' : '') . "</strong> [<a href=\"{$this->baseUrl}/logout.html\" class=\"logout\">log out</a>]" : "You are not currently <a href=\"{$this->baseUrl}/login.html" . /* (isSet ($this->actions[$this->action]['authentication']) ? */ '?' . htmlentities ($_SERVER['REQUEST_URI']) /* : '') */ . "\">logged in</a>") . '</p>' . $headerHtml;
+		$location = htmlentities ($_SERVER['REQUEST_URI']);
+		$this->ravenUser = !substr_count ($this->user, '@');
+		if (!$external) {	// 'external' here refers to pages loaded outside the system - see above, not external users
+			$headerHtml = '<p class="loggedinas">' . ($this->user ? 'You are logged in as: <strong>' . $this->user . ($this->userIsAdministrator ? ' (ADMIN)' : '') . "</strong> [<a href=\"{$this->baseUrl}/" . ($this->ravenUser ? 'logout' : 'externallogout') . ".html\" class=\"logout\">log out</a>]" : ($this->settings['externalAuth'] ? "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/externallogin.html?{$location}\">Friends login</a>]" : "You are not currently <a href=\"{$this->baseUrl}/login.html?{$location}\">logged in</a>")) . '</p>' . $headerHtml;
 		}
 		
 		# Show the header/tabs
@@ -225,16 +246,23 @@ class frontControllerApplication
 		# Require authentication for actions that require this
 		if (!$this->user && (isSet ($this->actions[$this->action]['authentication']) || $this->settings['authentication'])) {
 			if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
-			echo "\n<p><strong>You need to <a href=\"{$this->baseUrl}/login.html?" . htmlentities ($_SERVER['REQUEST_URI']) . "\">log in (using Raven)</a> before you can " . ($this->settings['authentication'] ? 'use this facility' : htmlentities (strtolower ($this->actions[$this->action]['description']))) . '.</strong></p>';
+			echo "\n<p><strong>You need to " . ($this->settings['externalAuth'] ? "log in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/externallogin.html?{$location}\">Friends login</a>]" : "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in (using Raven)</a>") . " before you can " . ($this->settings['authentication'] ? 'use this facility' : htmlentities (strtolower ($this->actions[$this->action]['description']))) . '.</strong></p>';
 			echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on Raven accounts</a> is available.)</p>";
 			return false;
 		}
 		
 		# Check administrator credentials if necessary
 		if (isSet ($this->actions[$this->action]['administrator']) && ($this->actions[$this->action]['administrator'])) {
-			if (!$this->userIsAdministrator) {
-				echo "\n<p><strong>You need to be logged on as an administrator to access this section.</p>";
-				return false;
+			if ($this->restrictedAdministrator) {
+				if (isSet ($this->actions[$this->action]['restrictedAdministrator']) && ($this->actions[$this->action]['restrictedAdministrator'])) {
+					echo "\n<p><strong>You need to be logged on as a full, unrestricted administrator to access this section.</p>";
+					return false;
+				}
+			} else {
+				if (!$this->userIsAdministrator) {
+					echo "\n<p><strong>You need to be logged on as an administrator to access this section.</p>";
+					return false;
+				}
 			}
 		}
 		
@@ -275,6 +303,8 @@ class frontControllerApplication
 		$this->globalDefaults = array (
 			'applicationName'				=> application::changeCase (get_class ($this)),
 			'authentication' 				=> false,	// Whether all pages require authentication
+			'externalAuth'					=> false,	// Allow external authentication/authorisation
+			'minimumPasswordLength'			=> 4,		// Minimum password length when using externalAuth
 			'h1'							=> false,
 			'useDatabase'					=> true,
 			'credentials'					=> false,	// Filename of credentials file, which results in hostname/username/password/database being ignored
@@ -363,6 +393,8 @@ class frontControllerApplication
 		# Remove tabs if necessary
 		if (!$this->settings['helpTab']) {unset ($actions['help']['tab']);}
 		
+		# Remove external login if necessary
+		if (!$this->settings['externalAuth']) {unset ($actions['externallogout']);}
 		
 		# Return the actions
 		return $actions;
@@ -390,6 +422,15 @@ class frontControllerApplication
 			# Skip if's an admin function and admin functions should be hidden
 			if (isSet ($attributes['administrator']) && ($attributes['administrator'])) {
 				if (!$this->userIsAdministrator) {
+					if (!$this->settings['revealAdminFunctions']) {
+						continue;
+					}
+				}
+			}
+			
+			# Skip if's a restricted admin function and admin functions should be hidden
+			if (isSet ($attributes['restrictedAdministrator']) && ($attributes['restrictedAdministrator'])) {
+				if ($this->restrictedAdministrator) {
 					if (!$this->settings['revealAdminFunctions']) {
 						continue;
 					}
@@ -562,7 +603,7 @@ class frontControllerApplication
 		
 		# Allocate their e-mail addresses
 		foreach ($administrators as $username => $administrator) {
-			$administrators[$username]['email'] = ((isSet ($administrator['email']) && (!empty ($administrator['email']))) ? $administrator['email'] : "{$username}@{$this->settings['emailDomain']}");
+			$administrators[$username]['email'] = ((isSet ($administrator['email']) && (!empty ($administrator['email']))) ? $administrator['email'] : $username . ((isSet ($administrator['userType']) && $administrator['userType'] == 'External') ? '' : "@{$this->settings['emailDomain']}"));
 		}
 		
 		# Return the array
@@ -582,14 +623,14 @@ class frontControllerApplication
 	
 	
 	# Login function
-	function login ()
+	function login ($method = 'login')
 	{
 		# Ensure there is a username
 		#!# Throw error 1 if on the login page and no username is provided by the server
-		if (ini_get ('output_buffering') && ereg ('^action=login', $_SERVER['QUERY_STRING'])) {
+		if (ini_get ('output_buffering') && ereg ("^action={$method}", $_SERVER['QUERY_STRING'])) {
 			$location = $this->baseUrl . '/';
-			if (substr_count ($_SERVER['QUERY_STRING'], 'action=login&/')) {
-				$location = '/' . str_replace ('action=login&/', '', $_SERVER['QUERY_STRING']);
+			if (substr_count ($_SERVER['QUERY_STRING'], "action={$method}&/")) {
+				$location = '/' . str_replace ("action={$method}&/", '', $_SERVER['QUERY_STRING']);
 			}
 			header ('Location: ' . $_SERVER['_SITE_URL'] . $location);
 			return false;
@@ -598,6 +639,22 @@ class frontControllerApplication
 		
 		# End
 		return true;
+	}
+	
+	
+	# Login function
+	function externallogin ()
+	{
+		# Pass on
+		return $this->login ($method = 'externallogin');
+	}
+	
+	
+	# Logout message
+	function externallogout ()
+	{
+		echo '
+		<p>To log out, please close all instances of your web browser.</p>';
 	}
 	
 	
@@ -761,7 +818,7 @@ class frontControllerApplication
 	{
 		# Add an administrator form
 		echo "\n<div class=\"{$boxClass}\">";
-		echo "\n<h3 id=\"add\">Add an administrator</h3>";
+		echo "\n<h3 id=\"add\">Add an administrator" . ($this->settings['externalAuth'] ? ' (Raven login)' : '') . '</h3>';
 		$form = new form (array (
 			'name' => 'add',
 			'submitTo' => '#add',
@@ -770,22 +827,106 @@ class frontControllerApplication
 			'div' => false,
 			'requiredFieldIndicator' => false,
 		));
-		if ($this->administrators) {
-			$administratorsRegexp = '^(' . implode ('|', array_keys ($this->administrators)) . ')$';
-		}
+		#!# Databind these forms
 		$form->input (array (
 			'name'			=> 'username',
 			'title'			=> 'Username',
 			'required'		=> true,
-			'disallow'		=> ($this->administrators ? array ($administratorsRegexp => 'That username is currently taken') : NULL),	 // Disallow current usernames
+			'current'		=> array_keys ($this->administrators),
+		));
+		$form->input (array (
+			'name'			=> 'forename',
+			'title'			=> 'Forename',
+			'required'		=> true,
+		));
+		$form->input (array (
+			'name'			=> 'surname',
+			'title'			=> 'Surname',
+			'required'		=> true,
+		));
+		$form->select (array (
+			'name'			=> 'privilege',
+			'title'			=> 'Privilege level',
+			'values'		=> array ('Administrator', 'Restricted administrator'),
+			'default'		=> 'Administrator',
+			'required'		=> true,
 		));
 		if ($result = $form->processForm ()) {
-			if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], array ("username__JOIN__{$this->settings['peopleDatabase']}__people__reserved" => $result['username']))) {
-				echo "\n<p>" . htmlentities ($result['username']) . " has been added as an administrator. <a href=\"\">Reset page.</a></p>";
+			if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], array ("username__JOIN__{$this->settings['peopleDatabase']}__people__reserved" => $result['username'], 'forename' => $result['forename'], 'surname' => $result['surname'], 'privilege' => $result['privilege']))) {
+				
+				# Confirm success and reload the list
+				echo "\n<p>" . htmlentities ($result['username']) . ' has been added as ' . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
 				$this->administrators = $this->getAdministrators ();
+				
+				# E-mail the new user
+				$applicationName = ucfirst (strip_tags ($this->settings['h1'] ? $this->settings['h1'] : $this->settings['applicationName']));
+				$message = "\nDear {$result['forename']},\n\nI have added you as having administrative rights for this facility.\n\nYou can log in using the following credentials:\n\nLogin at:    {$_SERVER['_SITE_URL']}{$this->baseUrl}/\nLogin type:  Raven login\nUsername:    {$result['username']}\nPassword:    [Your Raven password]\n\n\nPlease let me know if you have any questions.";
+				mail ($result['username'] . '@cam.ac.uk', $applicationName, wordwrap ($message), "From: {$this->userEmail}");
+				echo "\n<p class=\"success\">An e-mail giving the login details has been sent to the new user.</p>";
 			}
 		}
 		echo "\n" . '</div>';
+		
+		# Add an external administrator form, if using the external auth option
+		if ($this->settings['externalAuth']) {
+			echo "\n<div class=\"{$boxClass}\">";
+			echo "\n<h3 id=\"addexternal\">Add an external administrator</h3>";
+			$form = new form (array (
+				'name' => 'addexternal',
+				'submitTo' => '#addexternal',
+				'developmentEnvironment' => $this->settings['developmentEnvironment'],
+				'formCompleteText' => false,
+				'div' => false,
+				'displayRestrictions' => false,
+				'requiredFieldIndicator' => false,
+			));
+			$form->email (array (
+				'name'			=> 'email',
+				'title'			=> 'E-mail address',
+				'required'		=> true,
+				'current'		=> array_keys ($this->administrators),
+				'description'	=> '(This will be used as the login username)',
+			));
+			$form->input (array (
+				'name'			=> 'forename',
+				'title'			=> 'Forename',
+				'required'		=> true,
+			));
+			$form->input (array (
+				'name'			=> 'surname',
+				'title'			=> 'Surname',
+				'required'		=> true,
+			));
+			$form->password (array (
+				'name'			=> 'password',
+				'title'			=> 'Password',
+				'required'		=> true,
+				'generate'		=> true,
+				'minlength'		=> 4,
+			));
+			$form->select (array (
+				'name'			=> 'privilege',
+				'title'			=> 'Privilege level',
+				'values'		=> array ('Administrator', 'Restricted administrator'),
+				'default'		=> 'Administrator',
+				'required'		=> true,
+			));
+			if ($result = $form->processForm ()) {
+				if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], array ("username__JOIN__{$this->settings['peopleDatabase']}__people__reserved" => $result['email'], 'password' => crypt ($result['password']), 'userType' => 'External', 'forename' => $result['forename'], 'surname' => $result['surname'], 'privilege' => $result['privilege']))) {
+					
+					# Confirm success and reload the list
+					echo "\n<p>" . htmlentities ($result['username']) . ' has been added as an external ' . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
+					$this->administrators = $this->getAdministrators ();
+					
+					# E-mail the new user
+					$applicationName = ucfirst (strip_tags ($this->settings['h1'] ? $this->settings['h1'] : $this->settings['applicationName']));
+					$message = "\nDear {$result['forename']},\n\nI have added you as having administrative rights for this facility.\n\nYou can log in using the following credentials:\n\nLogin at:    {$_SERVER['_SITE_URL']}{$this->baseUrl}/\nLogin type:  Friends login\nUsername:    {$result['email']}\nPassword:    {$result['password']}\n\n\nPlease let me know if you have any questions.";
+					mail ($result['email'], $applicationName, wordwrap ($message), "From: {$this->userEmail}");
+					echo "\n<p class=\"success\">An e-mail giving the login details has been sent to the new user.</p>";
+				}
+			}
+			echo "\n" . '</div>';
+		}
 		
 		# Delete an administrator form
 		echo "\n<div class=\"{$boxClass}\">";
@@ -811,7 +952,7 @@ class frontControllerApplication
 			));
 			$form->input (array (
 				'name'			=> 'confirm',
-				'title'			=> 'Type username to confirm',
+				'title'			=> ($this->settings['externalAuth'] ? 'Type username/e-mail to confirm' : 'Type username to confirm'),
 				'required'		=> true,
 			));
 			$form->validation ('same', array ('username', 'confirm'));
@@ -833,7 +974,10 @@ class frontControllerApplication
 			echo "\n<p>There are no administrators set up yet.</p>";
 		} else {
 			echo "\n<p>The following are administrators of this system and can make changes to the data in it:</p>";
-			echo application::htmlTable ($this->administrators, $tableHeadingSubstitutions = array ("username__JOIN__{$this->settings['peopleDatabase']}__people__reserved" => 'Username', 'email' => 'E-mail', 'active' => 'Active?'), $class = 'lines', $showKey = false, $uppercaseHeadings = true);
+			$onlyFields = array ("username__JOIN__{$this->settings['peopleDatabase']}__people__reserved", 'active', 'email', 'forename', 'surname', 'privilege');
+			if ($this->settings['externalAuth']) {$onlyFields[] = 'userType';}
+			$tableHeadingSubstitutions = array ("username__JOIN__{$this->settings['peopleDatabase']}__people__reserved" => 'Username', 'email' => 'E-mail', 'active' => 'Active?', 'userType' => 'Login type');
+			echo application::htmlTable ($this->administrators, $tableHeadingSubstitutions, $class = 'lines', $showKey = false, $uppercaseHeadings = true, false, false, false, false, $onlyFields);
 		}
 		echo "\n" . '</div>';
 	}
