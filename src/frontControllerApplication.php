@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.1.0
+# Version 1.1.1
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -54,14 +54,14 @@ class frontControllerApplication
 			'url' => 'login.html',
 			'usetab' => 'home',
 		),
-		'externallogin' => array (
+		'loginexternal' => array (
 			'description' => 'Friends login',
-			'url' => 'externallogin.html',
+			'url' => 'loginexternal.html',
 			'usetab' => 'home',
 		),
-		'externallogout' => array (
+		'logoutexternal' => array (
 			'description' => 'Friends logout',
-			'url' => 'externallogout.html',
+			'url' => 'logoutexternal.html',
 			'usetab' => 'home',
 		),
 		'loggedout' => array (
@@ -130,8 +130,10 @@ class frontControllerApplication
 			if (!$this->databaseConnection->connection) {
 				#!# Move this to the main application class
 				if (!file_exists ('./errornotifiedflagfile')) {
-					umask (002);
-					file_put_contents ('./errornotifiedflagfile', date ('r'));
+					if (is_writable ('./errornotifiedflagfile')) {
+						umask (002);
+						file_put_contents ('./errornotifiedflagfile', date ('r'));
+					}
 					return $this->application->throwError (0);
 				} else {
 					// application::dumpData ($this->settings);
@@ -237,7 +239,7 @@ class frontControllerApplication
 		$location = htmlentities ($_SERVER['REQUEST_URI']);
 		$this->ravenUser = !substr_count ($this->user, '@');
 		if (!$external) {	// 'external' here refers to pages loaded outside the system - see above, not external users
-			$headerHtml = '<p class="loggedinas">' . ($this->user ? 'You are logged in as: <strong>' . $this->user . ($this->userIsAdministrator ? ' (ADMIN)' : '') . "</strong> [<a href=\"{$this->baseUrl}/" . ($this->ravenUser ? 'logout' : 'externallogout') . ".html\" class=\"logout\">log out</a>]" : ($this->settings['externalAuth'] ? "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/externallogin.html?{$location}\">Friends login</a>]" : "You are not currently <a href=\"{$this->baseUrl}/login.html?{$location}\">logged in</a>")) . '</p>' . $headerHtml;
+			$headerHtml = '<p class="loggedinas">' . ($this->user ? 'You are logged in as: <strong>' . $this->user . ($this->userIsAdministrator ? ' (ADMIN)' : '') . "</strong> [<a href=\"{$this->baseUrl}/" . ($this->ravenUser ? 'logout' : 'logoutexternal') . ".html\" class=\"logout\">log out</a>]" : ($this->settings['externalAuth'] ? "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "You are not currently <a href=\"{$this->baseUrl}/login.html?{$location}\">logged in</a>")) . '</p>' . $headerHtml;
 		}
 		
 		# Show the header/tabs
@@ -246,7 +248,7 @@ class frontControllerApplication
 		# Require authentication for actions that require this
 		if (!$this->user && (isSet ($this->actions[$this->action]['authentication']) || $this->settings['authentication'])) {
 			if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
-			echo "\n<p><strong>You need to " . ($this->settings['externalAuth'] ? "log in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/externallogin.html?{$location}\">Friends login</a>]" : "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in (using Raven)</a>") . " before you can " . ($this->settings['authentication'] ? 'use this facility' : htmlentities (strtolower ($this->actions[$this->action]['description']))) . '.</strong></p>';
+			echo "\n<p><strong>You need to " . ($this->settings['externalAuth'] ? "log in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in (using Raven)</a>") . " before you can " . ($this->settings['authentication'] ? 'use this facility' : htmlentities (strtolower ($this->actions[$this->action]['description']))) . '.</strong></p>';
 			echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on Raven accounts</a> is available.)</p>";
 			return false;
 		}
@@ -394,7 +396,7 @@ class frontControllerApplication
 		if (!$this->settings['helpTab']) {unset ($actions['help']['tab']);}
 		
 		# Remove external login if necessary
-		if (!$this->settings['externalAuth']) {unset ($actions['externallogout']);}
+		if (!$this->settings['externalAuth']) {unset ($actions['logoutexternal']);}
 		
 		# Return the actions
 		return $actions;
@@ -603,7 +605,7 @@ class frontControllerApplication
 		
 		# Allocate their e-mail addresses
 		foreach ($administrators as $username => $administrator) {
-			$administrators[$username]['email'] = ((isSet ($administrator['email']) && (!empty ($administrator['email']))) ? $administrator['email'] : $username . ((isSet ($administrator['userType']) && $administrator['userType'] == 'External') ? '' : "@{$this->settings['emailDomain']}"));
+			$administrators[$username]['email'] = ((isSet ($administrator['email']) && (!empty ($administrator['email']))) ? $administrator['email'] : $username . ($administrator['userType'] != 'External' ? "@{$this->settings['emailDomain']}" : ''));
 		}
 		
 		# Return the array
@@ -643,15 +645,15 @@ class frontControllerApplication
 	
 	
 	# Login function
-	function externallogin ()
+	function loginexternal ()
 	{
 		# Pass on
-		return $this->login ($method = 'externallogin');
+		return $this->login ($method = 'loginexternal');
 	}
 	
 	
 	# Logout message
-	function externallogout ()
+	function logoutexternal ()
 	{
 		echo '
 		<p>To log out, please close all instances of your web browser.</p>';
