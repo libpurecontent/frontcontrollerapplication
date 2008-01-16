@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.1.1
+# Version 1.1.2
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -597,8 +597,11 @@ class frontControllerApplication
 			$administrators = "{$this->settings['database']}.{$this->settings['administrators']}";
 		}
 		
+		# Get the fieldnames
+		$fields = $this->databaseConnection->getFieldnames ($this->settings['database'], $this->settings['administrators']);
+		
 		# Get the list of administrators
-		$query = "SELECT * FROM {$administrators} WHERE (active = 'Y' OR active = 'Yes');";
+		$query = "SELECT * FROM {$administrators}" . (in_array ('active', $fields) ? " WHERE (active = 'Y' OR active = 'Yes')" : '') . ';';
 		if (!$administrators = $this->databaseConnection->getData ($query, $administrators)) {
 			return false;
 		}
@@ -818,6 +821,18 @@ class frontControllerApplication
 	# Function to show administrators
 	function administrators ($null = NULL, $boxClass = 'graybox')
 	{
+		# Determine the name of the username field
+		#!# Use of $this->settings['administrators'] as table name here needs auditing
+		$fields = $this->databaseConnection->getFieldnames ($this->settings['database'], $this->settings['administrators']);
+		$possibleUsernameFields = array ('username', 'crsid', "username__JOIN__{$this->settings['peopleDatabase']}__people__reserved");
+		$usernameField = $possibleUsernameFields[0];
+		foreach ($possibleUsernameFields as $field) {
+			if (in_array ($field, $fields)) {
+				$usernameField = $field;
+				break;
+			}
+		}
+		
 		# Add an administrator form
 		echo "\n<div class=\"{$boxClass}\">";
 		echo "\n<h3 id=\"add\">Add an administrator" . ($this->settings['externalAuth'] ? ' (Raven login)' : '') . '</h3>';
@@ -827,49 +842,40 @@ class frontControllerApplication
 			'developmentEnvironment' => $this->settings['developmentEnvironment'],
 			'formCompleteText' => false,
 			'div' => false,
-			'requiredFieldIndicator' => false,
+			'databaseConnection'	=> $this->databaseConnection,
 		));
-		#!# Databind these forms
-		$form->input (array (
-			'name'			=> 'username',
-			'title'			=> 'Username',
-			'required'		=> true,
-			'current'		=> array_keys ($this->administrators),
-		));
-		$form->input (array (
-			'name'			=> 'forename',
-			'title'			=> 'Forename',
-			'required'		=> true,
-		));
-		$form->input (array (
-			'name'			=> 'surname',
-			'title'			=> 'Surname',
-			'required'		=> true,
-		));
-		$form->select (array (
-			'name'			=> 'privilege',
-			'title'			=> 'Privilege level',
-			'values'		=> array ('Administrator', 'Restricted administrator'),
-			'default'		=> 'Administrator',
-			'required'		=> true,
-		));
+		$form->dataBinding (array (
+			'database' => $this->settings['database'],
+			#!# This could cause problems
+			'table' => $this->settings['administrators'],
+			'includeOnly' => array ($usernameField, 'forename', 'surname', 'name', 'email', 'privilege'),
+			'attributes' => array (
+				$usernameField => array ('current' => array_keys ($this->administrators)),
+		)));
+		
+		# Process the form
 		if ($result = $form->processForm ()) {
-			if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], array ("username__JOIN__{$this->settings['peopleDatabase']}__people__reserved" => $result['username'], 'forename' => $result['forename'], 'surname' => $result['surname'], 'privilege' => $result['privilege']))) {
+			if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], $result)) {
+				
+				# Deal with variance in the fieldnames
+				$result['privilege'] = (isSet ($result['privilege']) ? $result['privilege'] : 'Administrator');
+				$result['forename'] = (isSet ($result['forename']) ? $result['forename'] : $result[$usernameField]);
 				
 				# Confirm success and reload the list
-				echo "\n<p>" . htmlentities ($result['username']) . ' has been added as ' . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
+				echo "\n<p>" . htmlentities ($result[$usernameField]) . ' has been added as ' . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
 				$this->administrators = $this->getAdministrators ();
 				
 				# E-mail the new user
 				$applicationName = ucfirst (strip_tags ($this->settings['h1'] ? $this->settings['h1'] : $this->settings['applicationName']));
-				$message = "\nDear {$result['forename']},\n\nI have added you as having administrative rights for this facility.\n\nYou can log in using the following credentials:\n\nLogin at:    {$_SERVER['_SITE_URL']}{$this->baseUrl}/\nLogin type:  Raven login\nUsername:    {$result['username']}\nPassword:    [Your Raven password]\n\n\nPlease let me know if you have any questions.";
-				mail ($result['username'] . '@cam.ac.uk', $applicationName, wordwrap ($message), "From: {$this->userEmail}");
+				$message = "\nDear {$result['forename']},\n\nI have added you as having administrative rights for this facility.\n\nYou can log in using the following credentials:\n\nLogin at:    {$_SERVER['_SITE_URL']}{$this->baseUrl}/\nLogin type:  Raven login\nUsername:    {$result[$usernameField]}\nPassword:    [Your Raven password]\n\n\nPlease let me know if you have any questions.";
+				mail ($result[$usernameField] . '@cam.ac.uk', $applicationName, wordwrap ($message), "From: {$this->userEmail}");
 				echo "\n<p class=\"success\">An e-mail giving the login details has been sent to the new user.</p>";
 			}
 		}
 		echo "\n" . '</div>';
 		
 		# Add an external administrator form, if using the external auth option
+		#!# Refactor to use dataBinding by combining with the above code
 		if ($this->settings['externalAuth']) {
 			echo "\n<div class=\"{$boxClass}\">";
 			echo "\n<h3 id=\"addexternal\">Add an external administrator</h3>";
@@ -914,10 +920,10 @@ class frontControllerApplication
 				'required'		=> true,
 			));
 			if ($result = $form->processForm ()) {
-				if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], array ("username__JOIN__{$this->settings['peopleDatabase']}__people__reserved" => $result['email'], 'password' => crypt ($result['password']), 'userType' => 'External', 'forename' => $result['forename'], 'surname' => $result['surname'], 'privilege' => $result['privilege']))) {
+				if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], array ($usernameField => $result['email'], 'password' => crypt ($result['password']), 'userType' => 'External', 'forename' => $result['forename'], 'surname' => $result['surname'], 'privilege' => $result['privilege']))) {
 					
 					# Confirm success and reload the list
-					echo "\n<p>" . htmlentities ($result['username']) . ' has been added as an external ' . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
+					echo "\n<p>" . htmlentities ($result[$usernameField]) . ' has been added as an external ' . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
 					$this->administrators = $this->getAdministrators ();
 					
 					# E-mail the new user
@@ -947,7 +953,7 @@ class frontControllerApplication
 				'requiredFieldIndicator' => false,
 			));
 			$form->select (array (
-				'name'	=> 'username',
+				'name'	=> $usernameField,
 				'title'	=> 'Select administrator to remove',
 				'required' => true,
 				'values' => array_keys ($administrators),
@@ -957,13 +963,13 @@ class frontControllerApplication
 				'title'			=> ($this->settings['externalAuth'] ? 'Type username/e-mail to confirm' : 'Type username to confirm'),
 				'required'		=> true,
 			));
-			$form->validation ('same', array ('username', 'confirm'));
+			$form->validation ('same', array ($usernameField, 'confirm'));
 			if ($result = $form->processForm ()) {
-				if ($this->databaseConnection->delete ($this->settings['database'], $this->settings['administrators'], array ("username__JOIN__{$this->settings['peopleDatabase']}__people__reserved" => $result['username']))) {
-					echo "\n<p>" . htmlentities ($result['username']) . " is no longer as an administrator. <a href=\"\">Reset page.</a></p>";
+				if ($this->databaseConnection->delete ($this->settings['database'], $this->settings['administrators'], array ($usernameField => $result[$usernameField]))) {
+					echo "\n<p>" . htmlentities ($result[$usernameField]) . " is no longer as an administrator. <a href=\"\">Reset page.</a></p>";
 					$this->administrators = $this->getAdministrators ();
 				} else {
-					echo "\n<p>There was a problem deleting the administrator. (Probably 'delete' privileges are not enabled for this table. Please contact the main administrator of the system.</p>";
+					echo "\n<p class=\"warning\">There was a problem deleting the administrator. (Probably 'delete' privileges are not enabled for this table. Please contact the main administrator of the system.</p>";
 				}
 			}
 		}
@@ -976,9 +982,9 @@ class frontControllerApplication
 			echo "\n<p>There are no administrators set up yet.</p>";
 		} else {
 			echo "\n<p>The following are administrators of this system and can make changes to the data in it:</p>";
-			$onlyFields = array ("username__JOIN__{$this->settings['peopleDatabase']}__people__reserved", 'active', 'email', 'forename', 'surname', 'privilege');
+			$onlyFields = array ($usernameField, 'active', 'email', 'privilege', 'name', 'forename', 'surname', 'privilege');
 			if ($this->settings['externalAuth']) {$onlyFields[] = 'userType';}
-			$tableHeadingSubstitutions = array ("username__JOIN__{$this->settings['peopleDatabase']}__people__reserved" => 'Username', 'email' => 'E-mail', 'active' => 'Active?', 'userType' => 'Login type');
+			$tableHeadingSubstitutions = array ($usernameField => 'Username', 'email' => 'E-mail', 'active' => 'Active?', 'userType' => 'Login type');
 			echo application::htmlTable ($this->administrators, $tableHeadingSubstitutions, $class = 'lines', $showKey = false, $uppercaseHeadings = true, false, false, false, false, $onlyFields);
 		}
 		echo "\n" . '</div>';
