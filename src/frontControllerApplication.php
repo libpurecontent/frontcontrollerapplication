@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.1.2
+# Version 1.1.3
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -490,7 +490,7 @@ class frontControllerApplication
 		# Add the parent action as the first item if necessary
 		if ($includeParent) {
 			$children[$parent] = $this->actions[$parent];
-			$children[$parent]['subtab'] = $children[$parent]['tab'] . ': home';
+			$children[$parent]['subtab'] = (isSet ($children[$parent]['tab']) ? $children[$parent]['tab'] . ': home' : 'Home');
 		}
 		
 		# Find actions in the current section that have a subtab requirement
