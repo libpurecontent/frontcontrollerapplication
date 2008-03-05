@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.1.4
+# Version 1.1.5
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -814,7 +814,7 @@ class frontControllerApplication
 		$form->setOutputScreen ();
 		
 		# Process the form
-		$result = $form->processForm ();
+		$result = $form->process ();
 	}
 	
 	
@@ -854,7 +854,7 @@ class frontControllerApplication
 		)));
 		
 		# Process the form
-		if ($result = $form->processForm ()) {
+		if ($result = $form->process ()) {
 			if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], $result)) {
 				
 				# Deal with variance in the fieldnames
@@ -919,7 +919,7 @@ class frontControllerApplication
 				'default'		=> 'Administrator',
 				'required'		=> true,
 			));
-			if ($result = $form->processForm ()) {
+			if ($result = $form->process ()) {
 				if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], array ($usernameField => $result['email'], 'password' => crypt ($result['password']), 'userType' => 'External', 'forename' => $result['forename'], 'surname' => $result['surname'], 'privilege' => $result['privilege']))) {
 					
 					# Confirm success and reload the list
@@ -964,7 +964,7 @@ class frontControllerApplication
 				'required'		=> true,
 			));
 			$form->validation ('same', array ($usernameField, 'confirm'));
-			if ($result = $form->processForm ()) {
+			if ($result = $form->process ()) {
 				if ($this->databaseConnection->delete ($this->settings['database'], $this->settings['administrators'], array ($usernameField => $result[$usernameField]))) {
 					echo "\n<p>" . htmlentities ($result[$usernameField]) . " is no longer as an administrator. <a href=\"\">Reset page.</a></p>";
 					$this->administrators = $this->getAdministrators ();
