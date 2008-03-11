@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.1.5
+# Version 1.2.0
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -236,7 +236,8 @@ class frontControllerApplication
 		if (!$this->login ()) {return false;}
 		
 		# Show login status
-		$location = htmlentities ($_SERVER['REQUEST_URI']);
+		#!# Should have urlencode also?
+		$location = htmlspecialchars ($_SERVER['REQUEST_URI']);
 		$this->ravenUser = !substr_count ($this->user, '@');
 		if (!$external) {	// 'external' here refers to pages loaded outside the system - see above, not external users
 			$headerHtml = '<p class="loggedinas">' . ($this->user ? 'You are logged in as: <strong>' . $this->user . ($this->userIsAdministrator ? ' (ADMIN)' : '') . "</strong> [<a href=\"{$this->baseUrl}/" . ($this->ravenUser ? 'logout' : 'logoutexternal') . ".html\" class=\"logout\">log out</a>]" : ($this->settings['externalAuth'] ? "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "You are not currently <a href=\"{$this->baseUrl}/login.html?{$location}\">logged in</a>")) . '</p>' . $headerHtml;
@@ -248,7 +249,7 @@ class frontControllerApplication
 		# Require authentication for actions that require this
 		if (!$this->user && (isSet ($this->actions[$this->action]['authentication']) || $this->settings['authentication'])) {
 			if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
-			echo "\n<p><strong>You need to " . ($this->settings['externalAuth'] ? "log in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in (using Raven)</a>") . " before you can " . ($this->settings['authentication'] ? 'use this facility' : htmlentities (strtolower ($this->actions[$this->action]['description']))) . '.</strong></p>';
+			echo "\n<p><strong>You need to " . ($this->settings['externalAuth'] ? "log in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in (using Raven)</a>") . " before you can " . ($this->settings['authentication'] ? 'use this facility' : htmlspecialchars (strtolower ($this->actions[$this->action]['description']))) . '.</strong></p>';
 			echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on Raven accounts</a> is available.)</p>";
 			return false;
 		}
@@ -758,7 +759,7 @@ class frontControllerApplication
 			if (ereg ("/\* (Success|Failure) (.{19}) by ([a-zA-Z0-9]+) \*/ (UPDATE|INSERT INTO) ([^.]+)\.([^ ]+) (.*)", $change, $parts)) {
 				$nameMatch = array ();
 				ereg (($parts[4] == 'UPDATE' ? "WHERE id='([a-z]+)';$" : "VALUES \('([a-z]+)',"), trim ($parts[7]), $nameMatch);
-				$changesHtml[] = "\n<h3 class=\"spaced\">[" . ($index + 1) . '] ' . ($parts[1] == 'Success' ? 'Successful' : 'Failed') . ' ' . ($parts[4] == 'UPDATE' ? 'update' : 'new submission') . (isSet ($nameMatch[1]) ? " made to <span class=\"warning\"><a href=\"{$this->baseUrl}/{$nameMatch[1]}/\">{$nameMatch[1]}</a></span>" : '') . ' by<br />' . $parts[3] . ' at ' . $parts[2] . ":</h3>\n<p>{$parts[4]} {$parts[5]}.{$parts[6]} " . htmlentities ($parts[7]) . '</p>';
+				$changesHtml[] = "\n<h3 class=\"spaced\">[" . ($index + 1) . '] ' . ($parts[1] == 'Success' ? 'Successful' : 'Failed') . ' ' . ($parts[4] == 'UPDATE' ? 'update' : 'new submission') . (isSet ($nameMatch[1]) ? " made to <span class=\"warning\"><a href=\"{$this->baseUrl}/{$nameMatch[1]}/\">{$nameMatch[1]}</a></span>" : '') . ' by<br />' . $parts[3] . ' at ' . $parts[2] . ":</h3>\n<p>{$parts[4]} {$parts[5]}.{$parts[6]} " . htmlspecialchars ($parts[7]) . '</p>';
 			}
 		}
 		
@@ -862,7 +863,7 @@ class frontControllerApplication
 				$result['forename'] = (isSet ($result['forename']) ? $result['forename'] : $result[$usernameField]);
 				
 				# Confirm success and reload the list
-				echo "\n<p>" . htmlentities ($result[$usernameField]) . ' has been added as ' . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
+				echo "\n<p>" . htmlspecialchars ($result[$usernameField]) . ' has been added as ' . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
 				$this->administrators = $this->getAdministrators ();
 				
 				# E-mail the new user
@@ -923,7 +924,7 @@ class frontControllerApplication
 				if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], array ($usernameField => $result['email'], 'password' => crypt ($result['password']), 'userType' => 'External', 'forename' => $result['forename'], 'surname' => $result['surname'], 'privilege' => $result['privilege']))) {
 					
 					# Confirm success and reload the list
-					echo "\n<p>" . htmlentities ($result[$usernameField]) . ' has been added as an external ' . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
+					echo "\n<p>" . htmlspecialchars ($result[$usernameField]) . ' has been added as an external ' . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
 					$this->administrators = $this->getAdministrators ();
 					
 					# E-mail the new user
@@ -966,7 +967,7 @@ class frontControllerApplication
 			$form->validation ('same', array ($usernameField, 'confirm'));
 			if ($result = $form->process ()) {
 				if ($this->databaseConnection->delete ($this->settings['database'], $this->settings['administrators'], array ($usernameField => $result[$usernameField]))) {
-					echo "\n<p>" . htmlentities ($result[$usernameField]) . " is no longer as an administrator. <a href=\"\">Reset page.</a></p>";
+					echo "\n<p>" . htmlspecialchars ($result[$usernameField]) . " is no longer as an administrator. <a href=\"\">Reset page.</a></p>";
 					$this->administrators = $this->getAdministrators ();
 				} else {
 					echo "\n<p class=\"warning\">There was a problem deleting the administrator. (Probably 'delete' privileges are not enabled for this table. Please contact the main administrator of the system.</p>";
