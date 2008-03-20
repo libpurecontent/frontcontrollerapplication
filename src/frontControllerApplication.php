@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.0
+# Version 1.2.1
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -240,14 +240,14 @@ class frontControllerApplication
 		$location = htmlspecialchars ($_SERVER['REQUEST_URI']);
 		$this->ravenUser = !substr_count ($this->user, '@');
 		if (!$external) {	// 'external' here refers to pages loaded outside the system - see above, not external users
-			$headerHtml = '<p class="loggedinas">' . ($this->user ? 'You are logged in as: <strong>' . $this->user . ($this->userIsAdministrator ? ' (ADMIN)' : '') . "</strong> [<a href=\"{$this->baseUrl}/" . ($this->ravenUser ? 'logout' : 'logoutexternal') . ".html\" class=\"logout\">log out</a>]" : ($this->settings['externalAuth'] ? "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "You are not currently <a href=\"{$this->baseUrl}/login.html?{$location}\">logged in</a>")) . '</p>' . $headerHtml;
+			$headerHtml = '<p class="loggedinas noprint">' . ($this->user ? 'You are logged in as: <strong>' . $this->user . ($this->userIsAdministrator ? ' (ADMIN)' : '') . "</strong> [<a href=\"{$this->baseUrl}/" . ($this->ravenUser ? 'logout' : 'logoutexternal') . ".html\" class=\"logout\">log out</a>]" : ($this->settings['externalAuth'] ? "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "You are not currently <a href=\"{$this->baseUrl}/login.html?{$location}\">logged in</a>")) . '</p>' . $headerHtml;
 		}
 		
 		# Show the header/tabs
 		echo $headerHtml;
 		
 		# Require authentication for actions that require this
-		if (!$this->user && (isSet ($this->actions[$this->action]['authentication']) || $this->settings['authentication'])) {
+		if (!$this->user && ((isSet ($this->actions[$this->action]['authentication']) && $this->actions[$this->action]['authentication']) || $this->settings['authentication'])) {
 			if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
 			echo "\n<p><strong>You need to " . ($this->settings['externalAuth'] ? "log in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in (using Raven)</a>") . " before you can " . ($this->settings['authentication'] ? 'use this facility' : htmlspecialchars (strtolower ($this->actions[$this->action]['description']))) . '.</strong></p>';
 			echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on Raven accounts</a> is available.)</p>";
