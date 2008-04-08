@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.1
+# Version 1.2.2
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -609,7 +609,7 @@ class frontControllerApplication
 		
 		# Allocate their e-mail addresses
 		foreach ($administrators as $username => $administrator) {
-			$administrators[$username]['email'] = ((isSet ($administrator['email']) && (!empty ($administrator['email']))) ? $administrator['email'] : $username . ($administrator['userType'] != 'External' ? "@{$this->settings['emailDomain']}" : ''));
+			$administrators[$username]['email'] = ((isSet ($administrator['email']) && (!empty ($administrator['email']))) ? $administrator['email'] : $username . (((!isSet ($administrator['userType'])) || ($administrator['userType'] != 'External')) ? "@{$this->settings['emailDomain']}" : ''));
 		}
 		
 		# Return the array
