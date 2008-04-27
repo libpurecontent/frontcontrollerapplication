@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.2
+# Version 1.2.3
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -101,6 +101,7 @@ class frontControllerApplication
 		);
 		
 		# Function to merge the arguments; note that $errors returns the errors by reference and not as a result from the method
+		#!# Ideally the start and end div would surround these items before $this->action is determined, but that would break external type handling
 		if (!$this->settings = application::assignArguments ($errors, $settings, $this->defaults, get_class ($this), NULL, $handleErrors = true)) {return false;}
 		
 		# Load the form if required
@@ -194,6 +195,14 @@ class frontControllerApplication
 		$this->action = (isSet ($_GET['action']) ? $_GET['action'] : false);
 		$this->item = (isSet ($_GET['item']) ? strtolower ($_GET['item']) : false);
 		
+		# Determine whether the action is an export type, i.e. has no house style or loaded outside the system
+		$this->exportType = (isSet ($this->actions[$this->action]['export']) && ($this->actions[$this->action]['export']));
+		if ($this->exportType) {$this->settings['div'] = false;}
+		
+		# Start a div if required to hold the application and define the ending div
+		if ($this->settings['div']) {echo "\n<div id=\"{$this->settings['div']}\">\n";}
+		$endDiv = ($this->settings['div'] ? "\n</div>" : '');
+		
 		# Determine if this action has parent action, and if so, what it is
 		$this->parentAction = (isSet ($this->actions[$this->action]['parent']) ? $this->actions[$this->action]['parent'] : false);
 		
@@ -220,37 +229,37 @@ class frontControllerApplication
 			$this->action = 'home';
 		}
 		
-		# Determine if the page is loaded outside the system
-		$external = (isSet ($this->actions[$this->action]['external']) && ($this->actions[$this->action]['external']));
-		
 		# Show the header
-		$headerHtml = '';
-		if (!$external) {$headerHtml .= "\n" . ($this->settings['h1'] ? $this->settings['h1'] : '<h1>' . ucfirst ($this->settings['applicationName']) . '</h1>');}
+		$headerHtml  = "\n" . ($this->settings['h1'] ? $this->settings['h1'] : '<h1>' . ucfirst ($this->settings['applicationName']) . '</h1>');
 		
 		# Show the tabs, any subtabs, and the action name
 		$headerHtml .= $this->showTabs ($this->action);
 		$headerHtml .= $this->showSubTabs ($this->action);
-		if ($this->actions[$this->action]['description'] && !substr_count ($this->actions[$this->action]['description'], '%')) {$headerHtml .= "\n<h2>{$this->actions[$this->action]['description']}</h2>";}
+		if ($this->actions[$this->action]['description'] && !substr_count ($this->actions[$this->action]['description'], '%') && (!isSet ($this->actions[$this->action]['heading']) || $this->actions[$this->action]['heading'])) {$headerHtml .= "\n<h2>{$this->actions[$this->action]['description']}</h2>";}
 		
 		# Redirect to the page requested if necessary
-		if (!$this->login ()) {return false;}
+		if (!$this->login ()) {
+			echo $endDiv;
+			return false;
+		}
 		
 		# Show login status
 		#!# Should have urlencode also?
 		$location = htmlspecialchars ($_SERVER['REQUEST_URI']);
 		$this->ravenUser = !substr_count ($this->user, '@');
-		if (!$external) {	// 'external' here refers to pages loaded outside the system - see above, not external users
-			$headerHtml = '<p class="loggedinas noprint">' . ($this->user ? 'You are logged in as: <strong>' . $this->user . ($this->userIsAdministrator ? ' (ADMIN)' : '') . "</strong> [<a href=\"{$this->baseUrl}/" . ($this->ravenUser ? 'logout' : 'logoutexternal') . ".html\" class=\"logout\">log out</a>]" : ($this->settings['externalAuth'] ? "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "You are not currently <a href=\"{$this->baseUrl}/login.html?{$location}\">logged in</a>")) . '</p>' . $headerHtml;
-		}
+		$headerHtml = '<p class="loggedinas noprint">' . ($this->user ? 'You are logged in as: <strong>' . $this->user . ($this->userIsAdministrator ? ' (ADMIN)' : '') . "</strong> [<a href=\"{$this->baseUrl}/" . ($this->ravenUser ? 'logout' : 'logoutexternal') . ".html\" class=\"logout\">log out</a>]" : ($this->settings['externalAuth'] ? "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "You are not currently <a href=\"{$this->baseUrl}/login.html?{$location}\">logged in</a>")) . '</p>' . $headerHtml;
 		
 		# Show the header/tabs
-		echo $headerHtml;
+		if (!$this->exportType) {
+			echo $headerHtml;
+		}
 		
 		# Require authentication for actions that require this
 		if (!$this->user && ((isSet ($this->actions[$this->action]['authentication']) && $this->actions[$this->action]['authentication']) || $this->settings['authentication'])) {
 			if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
 			echo "\n<p><strong>You need to " . ($this->settings['externalAuth'] ? "log in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in (using Raven)</a>") . " before you can " . ($this->settings['authentication'] ? 'use this facility' : htmlspecialchars (strtolower ($this->actions[$this->action]['description']))) . '.</strong></p>';
 			echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on Raven accounts</a> is available.)</p>";
+			echo $endDiv;
 			return false;
 		}
 		
@@ -259,11 +268,13 @@ class frontControllerApplication
 			if ($this->restrictedAdministrator) {
 				if (isSet ($this->actions[$this->action]['restrictedAdministrator']) && ($this->actions[$this->action]['restrictedAdministrator'])) {
 					echo "\n<p><strong>You need to be logged on as a full, unrestricted administrator to access this section.</p>";
+					echo $endDiv;
 					return false;
 				}
 			} else {
 				if (!$this->userIsAdministrator) {
-					echo "\n<p><strong>You need to be logged on as an administrator to access this section.</p>";
+					echo "\n<p><strong>You need to be logged on as an administrator to access this section.</strong></p>";
+					echo $endDiv;
 					return false;
 				}
 			}
@@ -279,9 +290,13 @@ class frontControllerApplication
 			}
 		}
 		
+		# Create a shortcut for the current year
+		$this->year = date ('Y');
+		
 		# Additional processing if required
 		if (method_exists ($this, 'main')) {
 			if ($this->main () === false) {
+				echo $endDiv;
 				return false;
 			}
 		}
@@ -296,6 +311,9 @@ class frontControllerApplication
 		
 		# Perform the action
 		$this->$action ($this->item);
+		if (!$this->exportType) {
+			echo $endDiv;
+		}
 	}
 	
 	
@@ -344,6 +362,8 @@ class frontControllerApplication
 			'form'							=> true,	// Whether to load ultimateForm
 			'opening'						=> false,
 			'closing'						=> false,
+			'div'							=> false,	// Whether to create a surrounding div with this id
+			'crsidRegexp' => '^[a-zA-Z][a-zA-Z0-9]{1,7}$',
 		);
 		
 		# Merge application defaults with the standard application defaults, with preference: constructor settings, application defaults, frontController application defaults
