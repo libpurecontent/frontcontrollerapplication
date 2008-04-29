@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.3
+# Version 1.2.4
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -257,7 +257,7 @@ class frontControllerApplication
 		# Require authentication for actions that require this
 		if (!$this->user && ((isSet ($this->actions[$this->action]['authentication']) && $this->actions[$this->action]['authentication']) || $this->settings['authentication'])) {
 			if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
-			echo "\n<p><strong>You need to " . ($this->settings['externalAuth'] ? "log in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in (using Raven)</a>") . " before you can " . ($this->settings['authentication'] ? 'use this facility' : htmlspecialchars (strtolower ($this->actions[$this->action]['description']))) . '.</strong></p>';
+			echo "\n<p><strong>You need to " . ($this->settings['externalAuth'] ? "log in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in (using Raven)</a>") . " before you can " . ($this->settings['authentication'] ? 'use this facility' : htmlspecialchars (strtolower (strip_tags ($this->actions[$this->action]['description'])))) . '.</strong></p>';
 			echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on Raven accounts</a> is available.)</p>";
 			echo $endDiv;
 			return false;
@@ -470,7 +470,7 @@ class frontControllerApplication
 			if (!isSet ($attributes['url'])) {$this->actions[$action]['url'] = "{$action}.html";}
 			
 			# Add the tab
-			$tabs[$action] = "<li class=\"{$action}" . ($isCurrent ? ' selected' : '') . "\"><a href=\"{$this->baseUrl}/{$this->actions[$action]['url']}\" title=\"{$attributes['description']}\">{$attributes['tab']}</a></li>";
+			$tabs[$action] = "<li class=\"{$action}" . ($isCurrent ? ' selected' : '') . "\"><a href=\"{$this->baseUrl}/{$this->actions[$action]['url']}\" title=\"" . trim (strip_tags ($attributes['description'])) . "\">{$attributes['tab']}</a></li>";
 		}
 		
 		# Compile the HTML
