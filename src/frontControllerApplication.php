@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.4
+# Version 1.2.5
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -31,7 +31,6 @@ class frontControllerApplication
 			'url' => 'admin.html',
 			'tab' => 'Admin',
 			'administrator' => true,
-			'restrictedAdministrator' => true,
 		),
 		'administrators' => array (
 			'description' => 'Add/remove/list administrators',
@@ -1030,6 +1029,35 @@ class frontControllerApplication
 		
 		# Show the HTML
 		echo $html;
+	}
+	
+	
+	# Function to send administrative alerts
+	function reportError ($adminMessage, $publicMessage = 'Apologies, but a problem with the setup of this system was found. The webmaster has been informed of this problem and will correct the misconfiguration as soon as possible. Please kindly check back later.', $class = 'warning')
+	{
+		# Show the error on screen if the user is an administrator
+		if (!$this->userIsAdministrator) {
+			
+			# Define standard e-mail headers
+			$mailheaders = 'From: ' . __CLASS__ . ' <' . $this->settings['administratorEmail'] . '>';
+			
+			# Send the message
+			mail ($this->settings['administratorEmail'], 'Error in ' . __CLASS__, wordwrap ($adminMessage), $mailheaders);
+		}
+		
+		# Create the visible text of an error
+		$html  = "\n<p class=\"{$class}\">" . htmlspecialchars ($publicMessage) . '</p>';
+		
+		# Add on debugging information if the user is an administrator
+		if ($this->userIsAdministrator) {
+			$html .= "\n<div class=\"graybox\">";
+			$html .= "\n<p class=\"warning\">Admin debug information:</p>";
+			$html .= "\n<pre>" . htmlspecialchars ($adminMessage) . '</pre>';
+			$html .= "\n</div>";
+		}
+		
+		# Return the error as HTML
+		return $html;
 	}
 }
 
