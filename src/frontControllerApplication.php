@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.5
+# Version 1.2.6
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -1036,13 +1036,13 @@ class frontControllerApplication
 	function reportError ($adminMessage, $publicMessage = 'Apologies, but a problem with the setup of this system was found. The webmaster has been informed of this problem and will correct the misconfiguration as soon as possible. Please kindly check back later.', $class = 'warning')
 	{
 		# Show the error on screen if the user is an administrator
-		if (!$this->userIsAdministrator) {
+		if ($this->userIsAdministrator) {
 			
 			# Define standard e-mail headers
-			$mailheaders = 'From: ' . __CLASS__ . ' <' . $this->settings['administratorEmail'] . '>';
+			$mailheaders = 'From: ' . $this->settings['applicationName'] . ' <' . $this->settings['administratorEmail'] . '>';
 			
 			# Send the message
-			mail ($this->settings['administratorEmail'], 'Error in ' . __CLASS__, wordwrap ($adminMessage), $mailheaders);
+			mail ($this->settings['administratorEmail'], 'Error in ' . $this->settings['applicationName'], wordwrap ($adminMessage), $mailheaders);
 		}
 		
 		# Create the visible text of an error
