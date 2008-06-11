@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.6
+# Version 1.2.7
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -81,7 +81,6 @@ class frontControllerApplication
 	{
 		# Load required libraries
 		require_once ('application.php');
-		require_once ('camUniData.php');
 		
 		# Define the location of the stub launching file and the image store
 		$this->baseUrl = application::getBaseUrl ();
@@ -102,6 +101,11 @@ class frontControllerApplication
 		# Function to merge the arguments; note that $errors returns the errors by reference and not as a result from the method
 		#!# Ideally the start and end div would surround these items before $this->action is determined, but that would break external type handling
 		if (!$this->settings = application::assignArguments ($errors, $settings, $this->defaults, get_class ($this), NULL, $handleErrors = true)) {return false;}
+		
+		# Load camUniData if required
+		if ($this->settings['useCamUniLookup']) {
+			require_once ('camUniData.php');
+		}
 		
 		# Load the form if required
 		if ($this->settings['form']) {
@@ -126,7 +130,7 @@ class frontControllerApplication
 		# If required, make connections to the database server and ensure the tables exist
 		if ($this->settings['useDatabase']) {
 			require_once ('database.php');
-			$this->databaseConnection = new database ($this->settings['hostname'], $this->settings['username'], $this->settings['password'], NULL, 'mysql', $this->settings['logfile'], $this->user);
+			$this->databaseConnection = new database ($this->settings['hostname'], $this->settings['username'], $this->settings['password'], $this->settings['database'], $this->settings['vendor'], $this->settings['logfile'], $this->user);
 			if (!$this->databaseConnection->connection) {
 				#!# Move this to the main application class
 				if (!file_exists ('./errornotifiedflagfile')) {
@@ -282,10 +286,12 @@ class frontControllerApplication
 		# Get the user's details
 		$this->userName = false;
 		$this->userEmail = false;
-		if ($this->user) {
-			if ($person = camUniData::getLookupData ($this->user)) {
-				$this->userName = $person['name'];
-				$this->userEmail = ($person['email'] ? $person['email'] : $this->user . '@cam.ac.uk');
+		if ($this->settings['useCamUniLookup']) {
+			if ($this->user) {
+				if ($person = camUniData::getLookupData ($this->user)) {
+					$this->userName = $person['name'];
+					$this->userEmail = ($person['email'] ? $person['email'] : $this->user . '@cam.ac.uk');
+				}
 			}
 		}
 		
@@ -306,13 +312,23 @@ class frontControllerApplication
 		}
 		
 		# Determine the action to use - the 'method' keyword is used to work around name clashes with reserved PHP keywords, e.g. clone.html -> clone -> clonearticle (as 'clone' is a PHP keyword so cannot be used as a method name)
-		$action = (isSet ($this->actions[$this->action]['method']) ? $this->actions[$this->action]['method'] : $this->action);
+		$this->doAction = (isSet ($this->actions[$this->action]['method']) ? $this->actions[$this->action]['method'] : $this->action);
 		
 		# Perform the action
-		$this->$action ($this->item);
+		$this->performAction ($this->doAction, $this->item);
+		
+		# End with a div if not an export type
 		if (!$this->exportType) {
 			echo $endDiv;
 		}
+	}
+	
+	
+	# Function to perform the action
+	function performAction ($action, $item)
+	{
+		# Perform the action
+		$this->$action ($item);
 	}
 	
 	
@@ -333,6 +349,7 @@ class frontControllerApplication
 			'password'						=> NULL,
 			#!# Consider a 'passwordFile' option that just contains the password, with other credentials specified normally and the username assumed to be the class name
 			'database'						=> NULL,
+			'vendor'						=> 'mysql',	// Database vendor
 			'peopleDatabase'				=> 'people',
 			'table'							=> NULL,
 			'administrators'				=> false,	// Administrators database e.g. 'administrators' or 'facility.administrators'
