@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.7
+# Version 1.2.8
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -198,6 +198,11 @@ class frontControllerApplication
 		$this->action = (isSet ($_GET['action']) ? $_GET['action'] : false);
 		$this->item = (isSet ($_GET['item']) ? strtolower ($_GET['item']) : false);
 		
+		# Compatibility fix to pump a script-supplied argument into the query string
+		if (isSet ($_SERVER['argv']) && isSet ($_SERVER['argv'][1]) && ereg ('^action=', $_SERVER['argv'][1])) {
+			$this->action = ereg_replace ('^action=', '', $_SERVER['argv'][1]);
+		}
+		
 		# Determine whether the action is an export type, i.e. has no house style or loaded outside the system
 		$this->exportType = (isSet ($this->actions[$this->action]['export']) && ($this->actions[$this->action]['export']));
 		if ($this->exportType) {$this->settings['div'] = false;}
@@ -354,10 +359,10 @@ class frontControllerApplication
 			'table'							=> NULL,
 			'administrators'				=> false,	// Administrators database e.g. 'administrators' or 'facility.administrators'
 			'logfile'						=> './logfile.txt',
-			'webmaster'						=> $_SERVER['SERVER_ADMIN'],
-			'administratorEmail'			=> $_SERVER['SERVER_ADMIN'],
-			'webmasterContactAddress'		=> $_SERVER['SERVER_ADMIN'],
-			'feedbackRecipient'				=> $_SERVER['SERVER_ADMIN'],
+			'webmaster'						=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
+			'administratorEmail'			=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
+			'webmasterContactAddress'		=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
+			'feedbackRecipient'				=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
 			'useCamUniLookup'				=> true,
 			'directoryIndex'				=> 'index.html',					# The directory index, used for local file retrieval
 			'userAgent'						=> 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)',	# The user-agent string used for external retrieval
