@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.8
+# Version 1.2.9
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -195,7 +195,7 @@ class frontControllerApplication
 */
 		
 		# Get the action
-		$this->action = (isSet ($_GET['action']) ? $_GET['action'] : false);
+		$this->action = (isSet ($_GET['action']) ? $_GET['action'] : 'home');
 		$this->item = (isSet ($_GET['item']) ? strtolower ($_GET['item']) : false);
 		
 		# Compatibility fix to pump a script-supplied argument into the query string
@@ -425,9 +425,12 @@ class frontControllerApplication
 	function assignActions ()
 	{
 		# Merge application actions with the standard application actions
-		$actions = $this->globalActions;
 		if (method_exists ($this, 'actions')) {
-			$actions = array_merge ($actions, $this->actions ());
+			$localActions = $this->actions ();
+			$actions = $this->globalActions;	// This is loaded after localActions, so that localActions can amend the global actions directly if wanted
+			$actions = array_merge ($actions, $localActions);
+		} else {
+			$actions = $this->globalActions;
 		}
 		
 		# Remove admin/feedback if required
@@ -490,8 +493,11 @@ class frontControllerApplication
 			# Make up the URL if not supplied
 			if (!isSet ($attributes['url'])) {$this->actions[$action]['url'] = "{$action}.html";}
 			
+			# Assemble the URL, adding the base URL in the usual case of not being an absolute URL
+			$url = ((substr ($this->actions[$action]['url'], 0, 1) == '/') ? '' : $this->baseUrl . '/') . $this->actions[$action]['url'];
+			
 			# Add the tab
-			$tabs[$action] = "<li class=\"{$action}" . ($isCurrent ? ' selected' : '') . "\"><a href=\"{$this->baseUrl}/{$this->actions[$action]['url']}\" title=\"" . trim (strip_tags ($attributes['description'])) . "\">{$attributes['tab']}</a></li>";
+			$tabs[$action] = "<li class=\"{$action}" . ($isCurrent ? ' selected' : '') . "\"><a href=\"{$url}\" title=\"" . trim (strip_tags ($attributes['description'])) . "\">{$attributes['tab']}</a></li>";
 		}
 		
 		# Compile the HTML
