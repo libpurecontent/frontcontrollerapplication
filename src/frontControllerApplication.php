@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.9
+# Version 1.2.10
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -456,7 +456,7 @@ class frontControllerApplication
 	
 	
 	# Function to show tabs of the actions
-	function showTabs ($current)
+	function showTabs ($current, $class = 'tabs')
 	{
 		# Switch tab context
 		if (isSet ($this->actions[$current]['usetab'])) {
@@ -501,7 +501,7 @@ class frontControllerApplication
 		}
 		
 		# Compile the HTML
-		$html = "\n" . '<ul class="tabs">' . "\n" . implode ("\n\t", $tabs) . "\n</ul>";
+		$html = "\n" . "<ul class=\"{$class}\">" . "\n" . implode ("\n\t", $tabs) . "\n</ul>";
 		
 		# Return the HTML
 		return $html;
