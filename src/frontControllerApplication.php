@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.10
+# Version 1.2.11
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -238,7 +238,7 @@ class frontControllerApplication
 		}
 		
 		# Show the header
-		$headerHtml  = "\n" . ($this->settings['h1'] ? $this->settings['h1'] : '<h1>' . ucfirst ($this->settings['applicationName']) . '</h1>');
+		$headerHtml  = "\n" . ($this->settings['h1'] === '' ? '' : ($this->settings['h1'] ? $this->settings['h1'] : '<h1>' . ucfirst ($this->settings['applicationName']) . '</h1>'));
 		
 		# Show the tabs, any subtabs, and the action name
 		$headerHtml .= $this->showTabs ($this->action);
@@ -346,7 +346,7 @@ class frontControllerApplication
 			'authentication' 				=> false,	// Whether all pages require authentication
 			'externalAuth'					=> false,	// Allow external authentication/authorisation
 			'minimumPasswordLength'			=> 4,		// Minimum password length when using externalAuth
-			'h1'							=> false,
+			'h1'							=> false,	// NB an empty string will remove <h1>..</h1> altogether
 			'useDatabase'					=> true,
 			'credentials'					=> false,	// Filename of credentials file, which results in hostname/username/password/database being ignored
 			'hostname'						=> 'localhost',
