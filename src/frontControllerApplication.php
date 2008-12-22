@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.11
+# Version 1.2.12
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -497,7 +497,7 @@ class frontControllerApplication
 			$url = ((substr ($this->actions[$action]['url'], 0, 1) == '/') ? '' : $this->baseUrl . '/') . $this->actions[$action]['url'];
 			
 			# Add the tab
-			$tabs[$action] = "<li class=\"{$action}" . ($isCurrent ? ' selected' : '') . "\"><a href=\"{$url}\" title=\"" . trim (strip_tags ($attributes['description'])) . "\">{$attributes['tab']}</a></li>";
+			$tabs[$action] = "<li class=\"{$action}" . ($isCurrent ? ' selected' : '') . "\"><a href=\"{$url}\" title=\"" . trim (strip_tags ($attributes['description'])) . '"'  . (isSet ($attributes['linkId']) ? " id=\"{$attributes['linkId']}\"" : '') . ">{$attributes['tab']}</a></li>";
 		}
 		
 		# Compile the HTML
