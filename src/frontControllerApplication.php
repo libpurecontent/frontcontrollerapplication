@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.12
+# Version 1.2.13
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -77,7 +77,7 @@ class frontControllerApplication
 	
 	
 	# Constructor
-	function __construct ($settings = array ())
+	function __construct ($settings = array (), $disableAutoGui = false)
 	{
 		# Load required libraries
 		require_once ('application.php');
@@ -204,7 +204,7 @@ class frontControllerApplication
 		}
 		
 		# Determine whether the action is an export type, i.e. has no house style or loaded outside the system
-		$this->exportType = (isSet ($this->actions[$this->action]['export']) && ($this->actions[$this->action]['export']));
+		$this->exportType = ($disableAutoGui || (isSet ($this->actions[$this->action]['export']) && ($this->actions[$this->action]['export'])));
 		if ($this->exportType) {$this->settings['div'] = false;}
 		
 		# Start a div if required to hold the application and define the ending div
@@ -320,7 +320,9 @@ class frontControllerApplication
 		$this->doAction = (isSet ($this->actions[$this->action]['method']) ? $this->actions[$this->action]['method'] : $this->action);
 		
 		# Perform the action
-		$this->performAction ($this->doAction, $this->item);
+		if (!$disableAutoGui) {
+			$this->performAction ($this->doAction, $this->item);
+		}
 		
 		# End with a div if not an export type
 		if (!$this->exportType) {
@@ -384,7 +386,7 @@ class frontControllerApplication
 			'opening'						=> false,
 			'closing'						=> false,
 			'div'							=> false,	// Whether to create a surrounding div with this id
-			'crsidRegexp' => '^[a-zA-Z][a-zA-Z0-9]{1,7}$',
+			'crsidRegexp'                                   => '^[a-zA-Z][a-zA-Z0-9]{1,7}$',
 		);
 		
 		# Merge application defaults with the standard application defaults, with preference: constructor settings, application defaults, frontController application defaults
