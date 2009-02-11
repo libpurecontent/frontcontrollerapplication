@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.13
+# Version 1.2.14
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -241,7 +241,7 @@ class frontControllerApplication
 		$headerHtml  = "\n" . ($this->settings['h1'] === '' ? '' : ($this->settings['h1'] ? $this->settings['h1'] : '<h1>' . ucfirst ($this->settings['applicationName']) . '</h1>'));
 		
 		# Show the tabs, any subtabs, and the action name
-		$headerHtml .= $this->showTabs ($this->action);
+		$headerHtml .= $this->showTabs ($this->action, $this->settings['tabUlClass']);
 		$headerHtml .= $this->showSubTabs ($this->action);
 		if ($this->actions[$this->action]['description'] && !substr_count ($this->actions[$this->action]['description'], '%') && (!isSet ($this->actions[$this->action]['heading']) || $this->actions[$this->action]['heading'])) {$headerHtml .= "\n<h2>{$this->actions[$this->action]['description']}</h2>";}
 		
@@ -386,7 +386,9 @@ class frontControllerApplication
 			'opening'						=> false,
 			'closing'						=> false,
 			'div'							=> false,	// Whether to create a surrounding div with this id
-			'crsidRegexp'                                   => '^[a-zA-Z][a-zA-Z0-9]{1,7}$',
+			'crsidRegexp'					=> '^[a-zA-Z][a-zA-Z0-9]{1,7}$',
+			'tabUlClass'					=> 'tabs',	// The class used for the ul tag for the tabs
+			'tabDivId'						=> false,	// Whether to surround the tabs with a div of this id (or false to disable)
 		);
 		
 		# Merge application defaults with the standard application defaults, with preference: constructor settings, application defaults, frontController application defaults
@@ -504,6 +506,11 @@ class frontControllerApplication
 		
 		# Compile the HTML
 		$html = "\n" . "<ul class=\"{$class}\">" . "\n" . implode ("\n\t", $tabs) . "\n</ul>";
+		
+		# Add on a surrounding div if required
+		if ($this->settings['tabDivId']) {
+			$html = "\n" . "<div id=\"{$this->settings['tabDivId']}\">" . "\n" . $html . "\n</div>";
+		}
 		
 		# Return the HTML
 		return $html;
