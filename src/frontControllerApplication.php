@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.14
+# Version 1.2.15
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -20,6 +20,9 @@ class frontControllerApplication
 			'description' => 'Help and documentation',
 			'url' => 'help.html',
 			'tab' => 'Help',
+		),
+		'page404' => array (
+			'description' => 'Error 404: page not found',
 		),
 		'feedback' => array (
 			'description' => 'Feedback/contact form',
@@ -371,8 +374,7 @@ class frontControllerApplication
 			'emailDomain'					=> 'cam.ac.uk',
 			'ravenGetPasswordUrl'			=> 'https://jackdaw.cam.ac.uk/get-raven-password/',
 			'ravenResetPasswordUrl'			=> 'https://jackdaw.cam.ac.uk/get-raven-password/',
-			#!# Make internal to reduce dependency
-			'page404'						=> 'sitetech/404.html',
+			'page404'						=> 'sitetech/404.html',	// Or false to use internal handler
 			'useAdmin'						=> true,
 			'revealAdminFunctions'			=> false,	// Whether to show admins-only tabs etc to non-administrators
 			'useFeedback'					=> true,
@@ -1054,7 +1056,11 @@ class frontControllerApplication
 		# End here
 		#!# Currently this is visible within the tabs
 		application::sendHeader (404);
-		include ($this->settings['page404']);
+		if ($this->settings['page404']) {
+			include ($this->settings['page404']);
+		} else {
+			echo "<p>Sorry, that page was not found. Please check the URL or use the menu to navigate elsewhere.</p>";
+		}
 		return false;
 	}
 	
