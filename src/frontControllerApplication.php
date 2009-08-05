@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.15
+# Version 1.2.16
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -294,11 +294,13 @@ class frontControllerApplication
 		# Get the user's details
 		$this->userName = false;
 		$this->userEmail = false;
+		$this->userPhone = false;
 		if ($this->settings['useCamUniLookup']) {
 			if ($this->user) {
 				if ($person = camUniData::getLookupData ($this->user)) {
 					$this->userName = $person['name'];
 					$this->userEmail = ($person['email'] ? $person['email'] : $this->user . '@cam.ac.uk');
+					$this->userPhone = $person['telephone'];
 				}
 			}
 		}
@@ -1076,20 +1078,26 @@ class frontControllerApplication
 	
 	
 	# Function to send administrative alerts
-	function reportError ($adminMessage, $publicMessage = 'Apologies, but a problem with the setup of this system was found. The webmaster has been informed of this problem and will correct the misconfiguration as soon as possible. Please kindly check back later.', $class = 'warning')
+	function reportError ($adminMessage, $publicMessage = 'Apologies, but a problem with the setup of this system was found. The webmaster has been informed of this problem and will correct the misconfiguration as soon as possible. Please kindly check back later.', $databaseModeData = false, $class = 'warning')
 	{
-		# Show the error on screen if the user is an administrator
-		if ($this->userIsAdministrator) {
-			
-			# Define standard e-mail headers
+		# Add on database error information if present
+		if ($this->settings['useDatabase'] && ($databaseModeData !== false)) {
+			$adminMessage .= "\n\nThe database said:\n" . application::dumpData ($this->databaseConnection->error (), true);
+		}
+		
+		# E-mail the error to the administrator (unless the user is an administrator)
+		if (!$this->userIsAdministrator) {
 			$mailheaders = 'From: ' . $this->settings['applicationName'] . ' <' . $this->settings['administratorEmail'] . '>';
-			
-			# Send the message
 			mail ($this->settings['administratorEmail'], 'Error in ' . $this->settings['applicationName'], wordwrap ($adminMessage), $mailheaders);
 		}
 		
+		# Start the HTML
+		$html  = '';
+		
 		# Create the visible text of an error
-		$html  = "\n<p class=\"{$class}\">" . htmlspecialchars ($publicMessage) . '</p>';
+		if ($publicMessage) {
+			$html .= "\n<p class=\"{$class}\">" . htmlspecialchars ($publicMessage) . '</p>';
+		}
 		
 		# Add on debugging information if the user is an administrator
 		if ($this->userIsAdministrator) {
