@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.17
+# Version 1.2.18
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -169,8 +169,6 @@ class frontControllerApplication
 		
 		# Set PHP parameters
 		ini_set ('error_reporting', 2047);
-		ini_set ('display_errors', $this->settings['developmentEnvironment']);
-		ini_set ('log_errors', !$this->settings['developmentEnvironment']);
 		
 		# Get the administrators and determine if the user is an administrator
 		#!# Should disable system or force entry if no administrators
@@ -383,7 +381,6 @@ class frontControllerApplication
 			'helpTab'						=> false,
 			'debug'							=> false,	# Whether to switch on debugging info
 			'minimumPhpVersion'				=> '5.1.0',	// PDO supported in 5.1 and above
-			'developmentEnvironment'		=> false,	// Whether we're running as a development runtime
 			'showChanges'					=> 25,		// Number of most recent changes to show in log file
 			'user'							=> false,	// Become this user
 			'form'							=> true,	// Whether to load ultimateForm
@@ -843,7 +840,6 @@ class frontControllerApplication
 		
 		# Create a new form
 		$form = new form (array (
-			'developmentEnvironment' => $this->settings['developmentEnvironment'],
 			'displayRestrictions' => false,
 			'formCompleteText' => "Many thanks for your input - we'll be in touch shortly if applicable.",
 			'antispam'	=> true,
@@ -900,7 +896,6 @@ class frontControllerApplication
 		$form = new form (array (
 			'name' => 'add',
 			'submitTo' => '#add',
-			'developmentEnvironment' => $this->settings['developmentEnvironment'],
 			'formCompleteText' => false,
 			'div' => false,
 			'databaseConnection'	=> $this->databaseConnection,
@@ -943,7 +938,6 @@ class frontControllerApplication
 			$form = new form (array (
 				'name' => 'addexternal',
 				'submitTo' => '#addexternal',
-				'developmentEnvironment' => $this->settings['developmentEnvironment'],
 				'formCompleteText' => false,
 				'div' => false,
 				'displayRestrictions' => false,
@@ -1008,7 +1002,6 @@ class frontControllerApplication
 			$form = new form (array (
 				'name' => 'remove',
 				'submitTo' => '#remove',
-				'developmentEnvironment' => $this->settings['developmentEnvironment'],
 				'formCompleteText' => false,
 				'div' => false,
 				'requiredFieldIndicator' => false,
