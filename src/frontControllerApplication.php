@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.19
+# Version 1.2.20
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -924,7 +924,7 @@ class frontControllerApplication
 				# E-mail the new user
 				$applicationName = ucfirst (strip_tags ($this->settings['h1'] ? $this->settings['h1'] : $this->settings['applicationName']));
 				$message = "\nDear {$result['forename']},\n\nI have added you as having administrative rights for this facility.\n\nYou can log in using the following credentials:\n\nLogin at:    {$_SERVER['_SITE_URL']}{$this->baseUrl}/\nLogin type:  Raven login\nUsername:    {$result[$usernameField]}\nPassword:    [Your Raven password]\n\n\nPlease let me know if you have any questions.";
-				mail ($result[$usernameField] . '@cam.ac.uk', $applicationName, wordwrap ($message), "From: {$this->userEmail}");
+				application::utf8Mail ($result[$usernameField] . '@cam.ac.uk', $applicationName, wordwrap ($message), "From: {$this->userEmail}");
 				echo "\n<p class=\"success\">An e-mail giving the login details has been sent to the new user.</p>";
 			}
 		}
@@ -984,7 +984,7 @@ class frontControllerApplication
 					# E-mail the new user
 					$applicationName = ucfirst (strip_tags ($this->settings['h1'] ? $this->settings['h1'] : $this->settings['applicationName']));
 					$message = "\nDear {$result['forename']},\n\nI have added you as having administrative rights for this facility.\n\nYou can log in using the following credentials:\n\nLogin at:    {$_SERVER['_SITE_URL']}{$this->baseUrl}/\nLogin type:  Friends login\nUsername:    {$result['email']}\nPassword:    {$result['password']}\n\n\nPlease let me know if you have any questions.";
-					mail ($result['email'], $applicationName, wordwrap ($message), "From: {$this->userEmail}");
+					application::utf8Mail ($result['email'], $applicationName, wordwrap ($message), "From: {$this->userEmail}");
 					echo "\n<p class=\"success\">An e-mail giving the login details has been sent to the new user.</p>";
 				}
 			}
@@ -1071,7 +1071,7 @@ class frontControllerApplication
 	
 	
 	# Function to send administrative alerts
-	function reportError ($adminMessage, $publicMessage = 'Apologies, but a problem with the setup of this system was found. The webmaster has been informed of this problem and will correct the misconfiguration as soon as possible. Please kindly check back later.', $databaseModeData = false, $class = 'warning')
+	function reportError ($adminMessage, $publicMessage = 'Apologies, but a problem with the setup of this system was found. The webmaster has been made aware of this problem and will correct the misconfiguration as soon as possible. Please kindly check back later.', $databaseModeData = false, $class = 'warning')
 	{
 		# Add on database error information if present
 		if ($this->settings['useDatabase'] && ($databaseModeData !== false)) {
@@ -1081,7 +1081,7 @@ class frontControllerApplication
 		# E-mail the error to the administrator (unless the user is an administrator)
 		if (!$this->userIsAdministrator) {
 			$mailheaders = 'From: ' . $this->settings['applicationName'] . ' <' . $this->settings['administratorEmail'] . '>';
-			mail ($this->settings['administratorEmail'], 'Error in ' . $this->settings['applicationName'], wordwrap ($adminMessage), $mailheaders);
+			application::utf8Mail ($this->settings['administratorEmail'], 'Error in ' . $this->settings['applicationName'], wordwrap ($adminMessage), $mailheaders);
 		}
 		
 		# Start the HTML
