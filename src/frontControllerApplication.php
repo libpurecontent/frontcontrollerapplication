@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.20
+# Version 1.2.21
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -135,18 +135,8 @@ class frontControllerApplication
 			require_once ('database.php');
 			$this->databaseConnection = new database ($this->settings['hostname'], $this->settings['username'], $this->settings['password'], $this->settings['database'], $this->settings['vendor'], $this->settings['logfile'], $this->user);
 			if (!$this->databaseConnection->connection) {
-				#!# Move this to the main application class
-				if (!file_exists ('./errornotifiedflagfile')) {
-					if (is_writable ('./errornotifiedflagfile')) {
-						umask (002);
-						file_put_contents ('./errornotifiedflagfile', date ('r'));
-					}
-					return $this->application->throwError (0);
-				} else {
-					// application::dumpData ($this->settings);
-					echo "\n<p class=\"warning\">Error: This facility is temporarily unavailable. Please check back shortly. The administrator has been notified of this problem.</p>";
-					return false;
-				}
+				echo $this->databaseConnection->reportError ($this->settings['administratorEmail'], $this->settings['applicationName']);
+				return false;
 			}
 			
 			# Assign a shortcut for the database table in use
