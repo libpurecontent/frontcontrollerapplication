@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.2.21
+# Version 1.3.0
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -190,8 +190,8 @@ class frontControllerApplication
 		$this->item = (isSet ($_GET['item']) ? strtolower ($_GET['item']) : false);
 		
 		# Compatibility fix to pump a script-supplied argument into the query string
-		if (isSet ($_SERVER['argv']) && isSet ($_SERVER['argv'][1]) && ereg ('^action=', $_SERVER['argv'][1])) {
-			$this->action = ereg_replace ('^action=', '', $_SERVER['argv'][1]);
+		if (isSet ($_SERVER['argv']) && isSet ($_SERVER['argv'][1]) && preg_match ('/^action=/', $_SERVER['argv'][1])) {
+			$this->action = preg_replace ('/^action=/', '', $_SERVER['argv'][1]);
 		}
 		
 		# Determine whether the action is an export type, i.e. has no house style or loaded outside the system
@@ -680,7 +680,8 @@ class frontControllerApplication
 	{
 		# Ensure there is a username
 		#!# Throw error 1 if on the login page and no username is provided by the server
-		if (ini_get ('output_buffering') && ereg ("^action={$method}", $_SERVER['QUERY_STRING'])) {
+		$delimiter = '/';
+		if (ini_get ('output_buffering') && preg_match ($delimiter . '^action=' . preg_quote ($method, $delimiter) . $delimiter, $_SERVER['QUERY_STRING'])) {
 			$location = $this->baseUrl . '/';
 			if (substr_count ($_SERVER['QUERY_STRING'], "action={$method}&/")) {
 				$location = '/' . str_replace ("action={$method}&/", '', $_SERVER['QUERY_STRING']);
@@ -803,9 +804,10 @@ class frontControllerApplication
 		$changesHtml = array ();
 		foreach ($changes as $index => $change) {
 			if (++$i == $this->settings['showChanges']) {break;}
-			if (ereg ("/\* (Success|Failure) (.{19}) by ([a-zA-Z0-9]+) \*/ (UPDATE|INSERT INTO) ([^.]+)\.([^ ]+) (.*)", $change, $parts)) {
+			$delimiter = '!';
+			if (preg_match ($delimiter . "/\* (Success|Failure) (.{19}) by ([a-zA-Z0-9]+) \*/ (UPDATE|INSERT INTO) ([^.]+)\.([^ ]+) (.*)" . $delimiter, $change, $parts)) {
 				$nameMatch = array ();
-				ereg (($parts[4] == 'UPDATE' ? "WHERE id='([a-z]+)';$" : "VALUES \('([a-z]+)',"), trim ($parts[7]), $nameMatch);
+				// preg_match ($delimiter . ($parts[4] == 'UPDATE' ? "WHERE id='([a-z]+)';$" : "VALUES \('([a-z]+)',") . $delimiter, trim ($parts[7]), $nameMatch);
 				$changesHtml[] = "\n<h3 class=\"spaced\">[" . ($index + 1) . '] ' . ($parts[1] == 'Success' ? 'Successful' : 'Failed') . ' ' . ($parts[4] == 'UPDATE' ? 'update' : 'new submission') . (isSet ($nameMatch[1]) ? " made to <span class=\"warning\"><a href=\"{$this->baseUrl}/{$nameMatch[1]}/\">{$nameMatch[1]}</a></span>" : '') . ' by<br />' . $parts[3] . ' at ' . $parts[2] . ":</h3>\n<p>{$parts[4]} {$parts[5]}.{$parts[6]} " . htmlspecialchars ($parts[7]) . '</p>';
 			}
 		}
