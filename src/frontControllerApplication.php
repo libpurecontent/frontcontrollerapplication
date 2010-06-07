@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.3.0
+# Version 1.3.1
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -71,6 +71,12 @@ class frontControllerApplication
 			'url' => 'loggedout.html',
 			'usetab' => 'home',
 		),
+		'data' => array (	// Used for e.g. AJAX calls, etc.
+			'description' => 'Data point',
+			'url' => 'data.html',
+			'export' => true,
+		),
+		
 	);
 	
 	# Define defaults; these can be extended by adding definitions in a defaults () method
@@ -114,6 +120,9 @@ class frontControllerApplication
 		if ($this->settings['form']) {
 			require_once ($this->settings['form'] === 'dev' ? 'ultimateForm-dev.php' : 'ultimateForm.php');
 		}
+		
+		# Define the data URL, e.g. for use with ultimateForm::<widget>::autocomplete
+		$this->dataUrl = "{$_SERVER['_SITE_URL']}{$this->baseUrl}/data.html";
 		
 		# Define the footer message which goes at the end of any e-mails sent
 		$this->footerMessage = "\n\n\n---\nIf you have any questions or need assistance with this facility, please check the help/feedback pages on the website at:\n{$_SERVER['_SITE_URL']}{$this->baseUrl}/";
@@ -559,12 +568,12 @@ class frontControllerApplication
 	
 	
 	# Function to determine whether this facility is open
-	function facilityIsOpen (&$html)
+	function facilityIsOpen (&$html, $openingExtraMessage = false, $closingExtraMessage = false)
 	{
 		# Check that the opening time has passed
 		if ($this->settings['opening']) {
 			if (time () < strtotime ($this->settings['opening'])) {
-				$html .= '<p class="warning">This facility is not yet open. Please return at a later date.</p>';
+				$html .= '<p class="warning">This facility is not yet open. Please return at a later date.</p>' . $openingExtraMessage;
 				return false;
 			}
 		}
@@ -572,7 +581,7 @@ class frontControllerApplication
 		# Check that the closing time has passed
 		if ($this->settings['closing']) {
 			if (time () > strtotime ($this->settings['closing'])) {
-				$html .= '<p class="warning">This facility has now closed.</p>';
+				$html .= '<p class="warning">This facility has now closed.</p>' . $closingExtraMessage;
 				return false;
 			}
 		}
@@ -709,6 +718,13 @@ class frontControllerApplication
 	{
 		echo '
 		<p>To log out, please close all instances of your web browser.</p>';
+	}
+	
+	
+	# Data point
+	function data ()
+	{
+		echo '<p>This URL can be assigned a function data() for transmission of data.</p>';
 	}
 	
 	
