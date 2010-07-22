@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.3.2
+# Version 1.3.3
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -389,6 +389,9 @@ class frontControllerApplication
 			'crsidRegexp'					=> '^[a-zA-Z][a-zA-Z0-9]{1,7}$',
 			'tabUlClass'					=> 'tabs',	// The class used for the ul tag for the tabs
 			'tabDivId'						=> false,	// Whether to surround the tabs with a div of this id (or false to disable)
+			'umaskPermissions'				=> 0022,	// Permissions for umask calls; the default here is standard Unix
+			'mkdirPermissions'				=> 0755,	// Permissions for mkdir calls; the default here is standard Unix
+			'chmodPermissions'				=> 0644,	// Permissions for chmod calls; the default here is standard Unix
 		);
 		
 		# Merge application defaults with the standard application defaults, with preference: constructor settings, application defaults, frontController application defaults
