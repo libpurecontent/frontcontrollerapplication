@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.3.3
+# Version 1.3.4
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -329,6 +329,11 @@ class frontControllerApplication
 		# End with a div if not an export type
 		if (!$this->exportType) {
 			echo $endDiv;
+		}
+		
+		# Run the shutdown (actually post-action) function if one has been defined
+		if (method_exists ($this, 'shutdown')) {
+			$this->shutdown ();
 		}
 	}
 	
