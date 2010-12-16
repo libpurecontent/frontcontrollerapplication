@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.3.4
+# Version 1.3.5
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -900,7 +900,7 @@ class frontControllerApplication
 	
 	
 	# Function to show administrators
-	function administrators ($null = NULL, $boxClass = 'graybox')
+	function administrators ($null = NULL, $boxClass = 'graybox', $showFields = array ('active' => 'Active?', 'email' => 'E-mail', 'privilege' => 'privilege', 'name' => 'name', 'forename' => 'forename', 'surname' => 'surname', ))
 	{
 		# Determine the name of the username field
 		#!# Use of $this->settings['administrators'] as table name here needs auditing
@@ -1060,9 +1060,10 @@ class frontControllerApplication
 			echo "\n<p>There are no administrators set up yet.</p>";
 		} else {
 			echo "\n<p>The following are administrators of this system and can make changes to the data in it:</p>";
-			$onlyFields = array ($usernameField, 'active', 'email', 'privilege', 'name', 'forename', 'surname', 'privilege');
+			$onlyFields = array_merge (array ($usernameField), array_keys ($showFields));
 			if ($this->settings['externalAuth']) {$onlyFields[] = 'userType';}
-			$tableHeadingSubstitutions = array ($usernameField => 'Username', 'email' => 'E-mail', 'active' => 'Active?', 'userType' => 'Login type');
+			$tableHeadingSubstitutions = $showFields;
+			$tableHeadingSubstitutions[$usernameField] = 'Username';
 			echo application::htmlTable ($this->administrators, $tableHeadingSubstitutions, $class = 'lines', $showKey = false, $uppercaseHeadings = true, false, false, false, false, $onlyFields);
 		}
 		echo "\n" . '</div>';
