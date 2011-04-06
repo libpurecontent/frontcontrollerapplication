@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.3.5
+# Version 1.3.6
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -82,6 +82,9 @@ class frontControllerApplication
 	# Define defaults; these can be extended by adding definitions in a defaults () method
 	var $defaults = array ();
 	var $globalDefaults = array ();
+	
+	# User status (an optional way of adding (...) after the username in the login corner
+	var $userStatus = false;
 	
 	
 	
@@ -255,7 +258,7 @@ class frontControllerApplication
 		#!# Should have urlencode also?
 		$location = htmlspecialchars ($_SERVER['REQUEST_URI']);
 		$this->ravenUser = !substr_count ($this->user, '@');
-		$headerHtml = '<p class="loggedinas noprint">' . ($this->user ? 'You are logged in as: <strong>' . $this->user . ($this->userIsAdministrator ? ' (ADMIN)' : '') . "</strong> [<a href=\"{$this->baseUrl}/" . ($this->ravenUser ? 'logout' : 'logoutexternal') . ".html\" class=\"logout\">log out</a>]" : ($this->settings['externalAuth'] ? "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "You are not currently <a href=\"{$this->baseUrl}/login.html?{$location}\">logged in</a>")) . '</p>' . $headerHtml;
+		$headerHtml = '<p class="loggedinas noprint">' . ($this->user ? 'You are logged in as: <strong>' . $this->user . ($this->userIsAdministrator ? ' (ADMIN)' : ($this->userStatus ? " ({$this->userStatus})" : '')) . "</strong> [<a href=\"{$this->baseUrl}/" . ($this->ravenUser ? 'logout' : 'logoutexternal') . ".html\" class=\"logout\">log out</a>]" : ($this->settings['externalAuth'] ? "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "You are not currently <a href=\"{$this->baseUrl}/login.html?{$location}\">logged in</a>")) . '</p>' . $headerHtml;
 		
 		# Show the header/tabs
 		if (!$this->exportType) {
