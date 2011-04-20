@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.3.6
+# Version 1.3.7
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -199,6 +199,7 @@ class frontControllerApplication
 		
 		# Get the action
 		$this->action = (isSet ($_GET['action']) ? $_GET['action'] : 'home');
+		#!# strtolower is potentially unhelpful here
 		$this->item = (isSet ($_GET['item']) ? strtolower ($_GET['item']) : false);
 		
 		# Compatibility fix to pump a script-supplied argument into the query string
@@ -277,17 +278,24 @@ class frontControllerApplication
 		# Check administrator credentials if necessary
 		if (isSet ($this->actions[$this->action]['administrator']) && ($this->actions[$this->action]['administrator'])) {
 			if ($this->restrictedAdministrator) {
-				if (isSet ($this->actions[$this->action]['restrictedAdministrator']) && ($this->actions[$this->action]['restrictedAdministrator'])) {
-					echo "\n<p><strong>You need to be logged on as a full, unrestricted administrator to access this section.</p>";
-					echo $endDiv;
-					return false;
-				}
+				echo "\n<p><strong>You need to be logged on as a full, unrestricted administrator to access this section.</p>";
+				echo $endDiv;
+				return false;
 			} else {
 				if (!$this->userIsAdministrator) {
 					echo "\n<p><strong>You need to be logged on as an administrator to access this section.</strong></p>";
 					echo $endDiv;
 					return false;
 				}
+			}
+		}
+		
+		# Check administrator credentials if necessary
+		if (isSet ($this->actions[$this->action]['restrictedAdministrator']) && ($this->actions[$this->action]['restrictedAdministrator'])) {
+			if (!$this->userIsAdministrator && !$this->restrictedAdministrator) {
+				echo "\n<p><strong>You need to be logged on as an restricted administrator to access this section.</strong></p>";
+				echo $endDiv;
+				return false;
 			}
 		}
 		
@@ -481,7 +489,7 @@ class frontControllerApplication
 		# Create the tabs
 		foreach ($this->actions as $action => $attributes) {
 			
-			# Skip if's an admin function and admin functions should be hidden
+			# Skip if it's an admin function and admin functions should be hidden
 			if (isSet ($attributes['administrator']) && ($attributes['administrator'])) {
 				if (!$this->userIsAdministrator) {
 					if (!$this->settings['revealAdminFunctions']) {
@@ -490,9 +498,9 @@ class frontControllerApplication
 				}
 			}
 			
-			# Skip if's a restricted admin function and admin functions should be hidden
+			# Skip if it's a restricted admin function and admin functions should be hidden
 			if (isSet ($attributes['restrictedAdministrator']) && ($attributes['restrictedAdministrator'])) {
-				if ($this->restrictedAdministrator) {
+				if (!$this->userIsAdministrator && !$this->restrictedAdministrator) {
 					if (!$this->settings['revealAdminFunctions']) {
 						continue;
 					}
@@ -1074,6 +1082,7 @@ class frontControllerApplication
 	
 	
 	# 404 page
+	#!# Needs to have a customised message mode
 	function page404 ()
 	{
 		# End here
