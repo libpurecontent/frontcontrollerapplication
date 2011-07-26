@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.3.7
+# Version 1.4.0
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -66,6 +66,26 @@ class frontControllerApplication
 			'url' => 'logoutexternal.html',
 			'usetab' => 'home',
 		),
+		'logininternal' => array (
+			'description' => 'Login',
+			'url' => 'logininternal.html',
+			'usetab' => 'home',
+		),
+		'logoutinternal' => array (
+			'description' => 'Logout',
+			'url' => 'logoutinternal.html',
+			'usetab' => 'home',
+		),
+		'register' => array (
+			'description' => 'Create a new account',
+			'url' => 'register.html',
+			'usetab' => 'home',
+		),
+		'resetpassword' => array (
+			'description' => 'Reset a forgotten password',
+			'url' => 'resetpassword.html',
+			'usetab' => 'home',
+		),
 		'loggedout' => array (
 			'description' => 'Logged out',
 			'url' => 'loggedout.html',
@@ -86,6 +106,8 @@ class frontControllerApplication
 	# User status (an optional way of adding (...) after the username in the login corner
 	var $userStatus = false;
 	
+	# Internal auth
+	var $internalAuthClass = NULL;
 	
 	
 	# Constructor
@@ -140,6 +162,7 @@ class frontControllerApplication
 		
 		# Get the username if set - the security model hands trust up to Apache/Raven
 		$this->user = (isSet ($_SERVER['REMOTE_USER']) ? $_SERVER['REMOTE_USER'] : NULL);
+		if ($this->settings['internalAuth']) {$this->user = false;}		// The user comes from a database connection so the "new database" call (which supplies $this->user) cannot know the user by this point; this ordering avoids having to create two database connections (one for this call and one for the userAccount class)
 		if ($this->settings['user']) {$this->user = $this->settings['user'];}
 		
 		# If required, make connections to the database server and ensure the tables exist
@@ -161,6 +184,16 @@ class frontControllerApplication
 				return false;
 			}
 			*/
+		}
+		
+		# Deal with internal auth (often not used)
+		$this->userVisibleIdentifier = $this->user;
+		$this->loadInternalAuth ();
+		if ($this->settings['internalAuth']) {
+			$this->user = $this->internalAuthClass->getUserId ();
+			$this->userVisibleIdentifier = $this->internalAuthClass->getUserEmail ();
+			#!# This appears above the tabs
+			echo $this->internalAuthClass->getHtml ();	// Basically will only appear if the user gets logged out for security reasons
 		}
 		
 		# Assign a shortcut for printing the home URL as http://servername... or www.servername...
@@ -259,7 +292,15 @@ class frontControllerApplication
 		#!# Should have urlencode also?
 		$location = htmlspecialchars ($_SERVER['REQUEST_URI']);
 		$this->ravenUser = !substr_count ($this->user, '@');
-		$headerHtml = '<p class="loggedinas noprint">' . ($this->user ? 'You are logged in as: <strong>' . $this->user . ($this->userIsAdministrator ? ' (ADMIN)' : ($this->userStatus ? " ({$this->userStatus})" : '')) . "</strong> [<a href=\"{$this->baseUrl}/" . ($this->ravenUser ? 'logout' : 'logoutexternal') . ".html\" class=\"logout\">log out</a>]" : ($this->settings['externalAuth'] ? "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "You are not currently <a href=\"{$this->baseUrl}/login.html?{$location}\">logged in</a>")) . '</p>' . $headerHtml;
+		$logoutUrl = 'logout.html';
+		$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/login.html?{$location}\">logged in</a>";
+		if (!$this->ravenUser) {$logoutUrl = 'logoutexternal.html';}
+		if ($this->settings['externalAuth']) {$loginTextLink = "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]";}
+		if ($this->settings['internalAuth']) {
+			$logoutUrl = 'logoutinternal.html';
+			$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/logininternal.html?{$location}\">logged in</a>";
+		}
+		$headerHtml = '<p class="loggedinas noprint">' . ($this->user ? 'You are logged in as: <strong>' . $this->userVisibleIdentifier . ($this->userIsAdministrator ? ' (ADMIN)' : ($this->userStatus ? " ({$this->userStatus})" : '')) . "</strong> [<a href=\"{$this->baseUrl}/" . $logoutUrl . "\" class=\"logout\">log out</a>]" : $loginTextLink) . '</p>' . $headerHtml;
 		
 		# Show the header/tabs
 		if (!$this->exportType) {
@@ -268,11 +309,19 @@ class frontControllerApplication
 		
 		# Require authentication for actions that require this
 		if (!$this->user && ((isSet ($this->actions[$this->action]['authentication']) && $this->actions[$this->action]['authentication']) || $this->settings['authentication'])) {
-			if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
-			echo "\n<p><strong>You need to " . ($this->settings['externalAuth'] ? "log in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]" : "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in (using Raven)</a>") . " before you can " . ($this->actions[$this->action]['description'] ? htmlspecialchars (strtolower (strip_tags ($this->actions[$this->action]['description']))) : 'use this facility') . '.</strong></p>';
-			echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on Raven accounts</a> is available.)</p>";
-			echo $endDiv;
-			return false;
+			$pagesNeverRequiringAuthentication = array ('register', 'resetpassword', );
+			if (!in_array ($this->action, $pagesNeverRequiringAuthentication)) {
+				if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
+				$loginTextLink = "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in (using Raven)</a>";
+				if ($this->settings['externalAuth']) {$loginTextLink = "log in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]";}
+				if ($this->settings['internalAuth']) {$loginTextLink = "<a href=\"{$this->baseUrl}/logininternal.html?{$location}\">log in</a>";}
+				echo "\n<p><strong>You need to " . $loginTextLink . " before you can " . ($this->actions[$this->action]['description'] ? htmlspecialchars (strtolower (strip_tags ($this->actions[$this->action]['description']))) : 'use this facility') . '.</strong></p>';
+				if (!$this->settings['internalAuth']) {
+					echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on Raven accounts</a> is available.)</p>";
+				}
+				echo $endDiv;
+				return false;
+			}
 		}
 		
 		# Check administrator credentials if necessary
@@ -363,10 +412,12 @@ class frontControllerApplication
 		# Specify available arguments as defaults or as NULL (to represent a required argument)
 		$this->globalDefaults = array (
 			'applicationName'				=> application::changeCase (get_class ($this)),
-			'authentication' 				=> false,	// Whether all pages require authentication
-			'externalAuth'					=> false,	// Allow external authentication/authorisation
-			'minimumPasswordLength'			=> 4,		// Minimum password length when using externalAuth
-			'h1'							=> false,	// NB an empty string will remove <h1>..</h1> altogether
+			'authentication' 				=> false,		// Whether all pages require authentication
+			'externalAuth'					=> false,		// Allow external authentication/authorisation
+			'internalAuth'					=> false,		// Allow internal authentication/authorisation
+			'internalAuthSalt'				=> '%_salt',	// Salt used for internalAuth; should be set if using internalAuth
+			'minimumPasswordLength'			=> 4,			// Minimum password length when using externalAuth
+			'h1'							=> false,		// NB an empty string will remove <h1>..</h1> altogether
 			'useDatabase'					=> true,
 			'credentials'					=> false,	// Filename of credentials file, which results in hostname/username/password/database being ignored
 			'hostname'						=> 'localhost',
@@ -464,7 +515,23 @@ class frontControllerApplication
 		if (!$this->settings['helpTab']) {unset ($actions['help']['tab']);}
 		
 		# Remove external login if necessary
-		if (!$this->settings['externalAuth']) {unset ($actions['logoutexternal']);}
+		if (!$this->settings['externalAuth']) {
+			unset ($actions['loginexternal']);
+			unset ($actions['logoutexternal']);
+		}
+		
+		# If using internal login, remove the standard login/logout
+		if ($this->settings['internalAuth']) {
+			unset ($actions['login']);
+			unset ($actions['logout']);
+		} else {
+			
+			# If not using internal login, remove the internal login functions
+			unset ($actions['logininternal']);
+			unset ($actions['logoutinternal']);
+			unset ($actions['register']);
+			unset ($actions['reset']);
+		}
 		
 		# Return the actions
 		return $actions;
@@ -714,10 +781,21 @@ class frontControllerApplication
 	# Login function
 	function login ($method = 'login')
 	{
-		# Ensure there is a username
+		# Ensure there is a username, by forcing a query string with "action=login" in to be redirected to the login method noted
 		#!# Throw error 1 if on the login page and no username is provided by the server
 		$delimiter = '/';
 		if (ini_get ('output_buffering') && preg_match ($delimiter . '^action=' . preg_quote ($method, $delimiter) . $delimiter, $_SERVER['QUERY_STRING'])) {
+			
+			# For internal login, return whether valid credentials have been supplied, and if not show a form
+			if ($this->settings['internalAuth']) {
+				$method = 'logininternal';
+				if (!$result = $this->logininternal ()) {
+					return false;
+				}
+			}
+			
+			# Redirect back
+			#!# Support output_buffering being off by providing a link
 			$location = $this->baseUrl . '/';
 			if (substr_count ($_SERVER['QUERY_STRING'], "action={$method}&/")) {
 				$location = '/' . str_replace ("action={$method}&/", '', $_SERVER['QUERY_STRING']);
@@ -725,7 +803,6 @@ class frontControllerApplication
 			header ('Location: ' . $_SERVER['_SITE_URL'] . $location);
 			return false;
 		}
-		#!# Support output_buffering being off by providing a link
 		
 		# End
 		return true;
@@ -736,15 +813,74 @@ class frontControllerApplication
 	function loginexternal ()
 	{
 		# Pass on
-		return $this->login ($method = 'loginexternal');
+		return $this->login (__FUNCTION__);
 	}
 	
 	
 	# Logout message
 	function logoutexternal ()
 	{
-		echo '
-		<p>To log out, please close all instances of your web browser.</p>';
+		echo "\n" . '<p>To log out, please close all instances of your web browser.</p>';
+	}
+	
+	
+	# Login function, only available if internalAuth is enabled
+	function logininternal ()
+	{
+		# Run the validation and return the supplied e-mail
+		$this->user = $this->internalAuthClass->login ($showStatus = true);
+		
+		# Assemble the HTML
+		$html  = "\n<h2>" . $this->actions['logininternal']['description'] . '</h2>';
+		$html .= $this->internalAuthClass->getHtml ();
+		
+		# Show the HTML
+		echo $html;
+		
+		# Return the status
+		return ($this->user);
+	}
+	
+	
+	# Logout message, only available if internalAuth is enabled
+	function logoutinternal ()
+	{
+		# Log out and confirm this status
+		$this->internalAuthClass->logout ();
+		
+		# Assemble the HTML
+		$html  = $this->internalAuthClass->getHtml ();
+		
+		# Show the HTML
+		echo $html;
+	}
+	
+	
+	# Register page
+	function register ()
+	{
+		# Log out and confirm this status
+		$this->internalAuthClass->register ();
+		
+		# Assemble the HTML
+		$html  = $this->internalAuthClass->getHtml ();
+		
+		# Show the HTML
+		echo $html;
+	}
+	
+	
+	# Reset password page
+	function resetpassword ()
+	{
+		# Log out and confirm this status
+		$this->internalAuthClass->resetpassword ();
+		
+		# Assemble the HTML
+		$html  = $this->internalAuthClass->getHtml ();
+		
+		# Show the HTML
+		echo $html;
 	}
 	
 	
@@ -897,7 +1033,7 @@ class frontControllerApplication
 			'name'			=> 'contacts',
 			'title'					=> 'E-mail',
 			'required'				=> true,
-			'default' => ($this->user ? $this->user . '@cam.ac.uk' : ''),
+			'default' => ($this->userVisibleIdentifier ? $this->userVisibleIdentifier . ($this->settings['internalAuth'] ? '' : '@' . $this->settings['emailDomain']) : ''),	// internalAuth will result in e-mail addresses not usernames
 			'editable' => (!$this->user),
 		));
 		
@@ -907,6 +1043,29 @@ class frontControllerApplication
 		
 		# Process the form
 		$result = $form->process ();
+	}
+	
+	
+	# Function to provide cookie-based login internally
+	function loadInternalAuth ()
+	{
+		# End if not required
+		if (!$this->settings['internalAuth']) {return false;}
+		
+		# Assemble the settings to use
+		$internalAuthSettings = array (
+			'salt'					=> $this->settings['internalAuthSalt'],
+			'baseUrl'				=> $this->baseUrl,
+			'loginUrl'				=> '/logininternal.html',
+			'logoutUrl'				=> '/logoutinternal.html',
+			'database'				=> $this->settings['database'],
+			'applicationName'		=> $this->settings['applicationName'],
+			'administratorEmail'	=> $this->settings['administratorEmail'],
+		);
+		
+		# Load the user account system
+		require_once ('userAccount.php');
+		$this->internalAuthClass = new userAccount ($internalAuthSettings, $this->databaseConnection);
 	}
 	
 	
