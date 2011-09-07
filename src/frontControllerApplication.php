@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.4.0
+# Version 1.4.1
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -186,16 +186,6 @@ class frontControllerApplication
 			*/
 		}
 		
-		# Deal with internal auth (often not used)
-		$this->userVisibleIdentifier = $this->user;
-		$this->loadInternalAuth ();
-		if ($this->settings['internalAuth']) {
-			$this->user = $this->internalAuthClass->getUserId ();
-			$this->userVisibleIdentifier = $this->internalAuthClass->getUserEmail ();
-			#!# This appears above the tabs
-			echo $this->internalAuthClass->getHtml ();	// Basically will only appear if the user gets logged out for security reasons
-		}
-		
 		# Assign a shortcut for printing the home URL as http://servername... or www.servername...
 		$this->homeUrlVisible = (!substr ($_SERVER['SERVER_NAME'], 0, -3) != 'www' ? 'http://' : '') . $_SERVER['SERVER_NAME'] . $_SERVER['PHP_SELF'];
 		
@@ -204,6 +194,26 @@ class frontControllerApplication
 		
 		# Set PHP parameters
 		ini_set ('error_reporting', 2047);
+		
+		# Get the action
+		$this->action = (isSet ($_GET['action']) ? $_GET['action'] : 'home');
+		
+		# If dataDisableAuth is needed, and action=data, do not load internal auth, as we do not want cookie transmission of any sort
+		if ($this->settings['dataDisableAuth']) {
+			if ($this->action == 'data') {
+				$this->settings['internalAuth'] = false;
+			}
+		}
+		
+		# Deal with internal auth (often not used)
+		$this->userVisibleIdentifier = $this->user;
+		if ($this->settings['internalAuth']) {
+			$this->loadInternalAuth ();
+			$this->user = $this->internalAuthClass->getUserId ();
+			$this->userVisibleIdentifier = $this->internalAuthClass->getUserEmail ();
+			#!# This appears above the tabs
+			echo $this->internalAuthClass->getHtml ();	// Basically will only appear if the user gets logged out for security reasons
+		}
 		
 		# Get the administrators and determine if the user is an administrator
 		#!# Should disable system or force entry if no administrators
@@ -230,8 +240,7 @@ class frontControllerApplication
 		}
 */
 		
-		# Get the action
-		$this->action = (isSet ($_GET['action']) ? $_GET['action'] : 'home');
+		# Assign the item (basically to deal with the common scenario of a function needing an ID parameter
 		#!# strtolower is potentially unhelpful here
 		$this->item = (isSet ($_GET['item']) ? strtolower ($_GET['item']) : false);
 		
@@ -308,13 +317,15 @@ class frontControllerApplication
 		}
 		
 		# Require authentication for actions that require this
-		if (!$this->user && ((isSet ($this->actions[$this->action]['authentication']) && $this->actions[$this->action]['authentication']) || $this->settings['authentication'])) {
+		$authRequiredByAction = (isSet ($this->actions[$this->action]['authentication']) && $this->actions[$this->action]['authentication']);
+		if (!$this->user && ($authRequiredByAction || $this->settings['authentication'])) {
 			$pagesNeverRequiringAuthentication = array ('register', 'resetpassword', );
+			if ($this->settings['dataDisableAuth']) {$pagesNeverRequiringAuthentication[] = 'data';}
 			if (!in_array ($this->action, $pagesNeverRequiringAuthentication)) {
 				if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
 				$loginTextLink = "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in (using Raven)</a>";
 				if ($this->settings['externalAuth']) {$loginTextLink = "log in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]";}
-				if ($this->settings['internalAuth']) {$loginTextLink = "<a href=\"{$this->baseUrl}/logininternal.html?{$location}\">log in</a>";}
+				if ($this->settings['internalAuth']) {$loginTextLink = "<a href=\"{$this->baseUrl}/logininternal.html?{$location}\">log in</a> (or <a href=\"{$this->baseUrl}/register.html\">create an account</a>)";}
 				echo "\n<p><strong>You need to " . $loginTextLink . " before you can " . ($this->actions[$this->action]['description'] ? htmlspecialchars (strtolower (strip_tags ($this->actions[$this->action]['description']))) : 'use this facility') . '.</strong></p>';
 				if (!$this->settings['internalAuth']) {
 					echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on Raven accounts</a> is available.)</p>";
@@ -356,7 +367,7 @@ class frontControllerApplication
 			if ($this->user) {
 				if ($person = camUniData::getLookupData ($this->user)) {
 					$this->userName = $person['name'];
-					$this->userEmail = ($person['email'] ? $person['email'] : $this->user . '@cam.ac.uk');
+					$this->userEmail = ($person['email'] ? $person['email'] : $this->user . '@' . $this->settings['emailDomain']);
 					$this->userPhone = $person['telephone'];
 				}
 			}
@@ -411,54 +422,57 @@ class frontControllerApplication
 	{
 		# Specify available arguments as defaults or as NULL (to represent a required argument)
 		$this->globalDefaults = array (
-			'applicationName'				=> application::changeCase (get_class ($this)),
-			'authentication' 				=> false,		// Whether all pages require authentication
-			'externalAuth'					=> false,		// Allow external authentication/authorisation
-			'internalAuth'					=> false,		// Allow internal authentication/authorisation
-			'internalAuthSalt'				=> '%_salt',	// Salt used for internalAuth; should be set if using internalAuth
-			'minimumPasswordLength'			=> 4,			// Minimum password length when using externalAuth
-			'h1'							=> false,		// NB an empty string will remove <h1>..</h1> altogether
-			'useDatabase'					=> true,
-			'credentials'					=> false,	// Filename of credentials file, which results in hostname/username/password/database being ignored
-			'hostname'						=> 'localhost',
-			'username'						=> NULL,
-			'password'						=> NULL,
+			'applicationName'								=> application::changeCase (get_class ($this)),
+			'authentication' 								=> false,		// Whether all pages require authentication
+			'dataDisableAuth'								=> false,		// Whether to disable auth on the data function (only relevant when using authentication=true); this can cause logout due to fast cookie transfer
+			'externalAuth'									=> false,		// Allow external authentication/authorisation
+			'internalAuth'									=> false,		// Allow internal authentication/authorisation
+			'internalAuthSalt'								=> '%_salt',	// Salt used for internalAuth; should be set if using internalAuth
+			'internalAuthPasswordRequiresLettersAndNumbers'	=> true,	// Whether the internal auth password requires both letters and numbers
+			'minimumPasswordLength'							=> 4,			// Minimum password length when using externalAuth
+			'h1'											=> false,		// NB an empty string will remove <h1>..</h1> altogether
+			'useDatabase'									=> true,
+			'credentials'									=> false,	// Filename of credentials file, which results in hostname/username/password/database being ignored
+			'hostname'										=> 'localhost',
+			'username'										=> NULL,
+			'password'										=> NULL,
 			#!# Consider a 'passwordFile' option that just contains the password, with other credentials specified normally and the username assumed to be the class name
-			'database'						=> NULL,
-			'vendor'						=> 'mysql',	// Database vendor
-			'peopleDatabase'				=> 'people',
-			'table'							=> NULL,
-			'administrators'				=> false,	// Administrators database e.g. 'administrators' or 'facility.administrators'
-			'logfile'						=> './logfile.txt',
-			'webmaster'						=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
-			'administratorEmail'			=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
-			'webmasterContactAddress'		=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
-			'feedbackRecipient'				=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
-			'useCamUniLookup'				=> true,
-			'directoryIndex'				=> 'index.html',					# The directory index, used for local file retrieval
-			'userAgent'						=> 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)',	# The user-agent string used for external retrieval
-			'emailDomain'					=> 'cam.ac.uk',
-			'ravenGetPasswordUrl'			=> 'https://jackdaw.cam.ac.uk/get-raven-password/',
-			'ravenResetPasswordUrl'			=> 'https://jackdaw.cam.ac.uk/get-raven-password/',
-			'page404'						=> 'sitetech/404.html',	// Or false to use internal handler
-			'useAdmin'						=> true,
-			'revealAdminFunctions'			=> false,	// Whether to show admins-only tabs etc to non-administrators
-			'useFeedback'					=> true,
-			'helpTab'						=> false,
-			'debug'							=> false,	# Whether to switch on debugging info
-			'minimumPhpVersion'				=> '5.1.0',	// PDO supported in 5.1 and above
-			'showChanges'					=> 25,		// Number of most recent changes to show in log file
-			'user'							=> false,	// Become this user
-			'form'							=> true,	// Whether to load ultimateForm
-			'opening'						=> false,
-			'closing'						=> false,
-			'div'							=> false,	// Whether to create a surrounding div with this id
-			'crsidRegexp'					=> '^[a-zA-Z][a-zA-Z0-9]{1,7}$',
-			'tabUlClass'					=> 'tabs',	// The class used for the ul tag for the tabs
-			'tabDivId'						=> false,	// Whether to surround the tabs with a div of this id (or false to disable)
-			'umaskPermissions'				=> 0022,	// Permissions for umask calls; the default here is standard Unix
-			'mkdirPermissions'				=> 0755,	// Permissions for mkdir calls; the default here is standard Unix
-			'chmodPermissions'				=> 0644,	// Permissions for chmod calls; the default here is standard Unix
+			'database'										=> NULL,
+			'vendor'										=> 'mysql',	// Database vendor
+			'peopleDatabase'								=> 'people',
+			'table'											=> NULL,
+			'administrators'								=> false,	// Administrators database e.g. 'administrators' or 'facility.administrators'
+			'logfile'										=> './logfile.txt',
+			'webmaster'										=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
+			'administratorEmail'							=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
+			'webmasterContactAddress'						=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
+			'feedbackRecipient'								=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
+			'useCamUniLookup'								=> true,
+			'directoryIndex'								=> 'index.html',					# The directory index, used for local file retrieval
+			'userAgent'										=> 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)',	# The user-agent string used for external retrieval
+			'emailDomain'									=> 'cam.ac.uk',
+			'ravenGetPasswordUrl'							=> 'https://jackdaw.cam.ac.uk/get-raven-password/',
+			'ravenResetPasswordUrl'							=> 'https://jackdaw.cam.ac.uk/get-raven-password/',
+			'ravenCentralLogoutUrl'							=> 'https://raven.cam.ac.uk/auth/logout.html',
+			'page404'										=> 'sitetech/404.html',	// Or false to use internal handler
+			'useAdmin'										=> true,
+			'revealAdminFunctions'							=> false,	// Whether to show admins-only tabs etc to non-administrators
+			'useFeedback'									=> true,
+			'helpTab'										=> false,
+			'debug'											=> false,	# Whether to switch on debugging info
+			'minimumPhpVersion'								=> '5.1.0',	// PDO supported in 5.1 and above
+			'showChanges'									=> 25,		// Number of most recent changes to show in log file
+			'user'											=> false,	// Become this user
+			'form'											=> true,	// Whether to load ultimateForm
+			'opening'										=> false,
+			'closing'										=> false,
+			'div'											=> false,	// Whether to create a surrounding div with this id
+			'crsidRegexp'									=> '^[a-zA-Z][a-zA-Z0-9]{1,7}$',
+			'tabUlClass'									=> 'tabs',	// The class used for the ul tag for the tabs
+			'tabDivId'										=> false,	// Whether to surround the tabs with a div of this id (or false to disable)
+			'umaskPermissions'								=> 0022,	// Permissions for umask calls; the default here is standard Unix
+			'mkdirPermissions'								=> 0755,	// Permissions for mkdir calls; the default here is standard Unix
+			'chmodPermissions'								=> 0644,	// Permissions for chmod calls; the default here is standard Unix
 		);
 		
 		# Merge application defaults with the standard application defaults, with preference: constructor settings, application defaults, frontController application defaults
@@ -896,7 +910,7 @@ class frontControllerApplication
 	{
 		echo '
 		<p>You have logged out of Raven for this site.</p>
-		<p>If you have finished browsing, then you should completely exit your web browser. This is the best way to prevent others from accessing your personal information and visiting web sites using your identity. If for any reason you can\'t exit your browser you should first log-out of all other personalized sites that you have accessed and then <a href="https://raven.cam.ac.uk/auth/logout.html" target="_blank">logout from the central authentication service</a>.</p>';
+		<p>If you have finished browsing, then you should completely exit your web browser. This is the best way to prevent others from accessing your personal information and visiting web sites using your identity. If for any reason you can\'t exit your browser you should first log-out of all other personalized sites that you have accessed and then <a href="' . $this->settings['ravenCentralLogoutUrl'] . '" target="_blank">logout from the central authentication service</a>.</p>';
 	}
 	
 	
@@ -905,8 +919,8 @@ class frontControllerApplication
 	{
 		# Construct the help text
 		$html  = "\n" . '<h3 id="updating">User accounts - Raven authentication</h3>';
-		$html .= "\n" . '<p>To make changes, a Raven password is required for security. You can <a href="' . $this->settings['ravenGetPasswordUrl'] . '" target="external">obtain your Raven password</a> from the University Computing Service immediately if you do not yet have it.</p>';
-		$html .= "\n" . '<p>If you have <strong>forgotten</strong> your Raven password, you will need to <a href="' . $this->settings['ravenResetPasswordUrl'] . '" target="external">request a new one</a> from the central University Computing Service.</p>';
+		$html .= "\n" . '<p>To make changes, a Raven password is required for security. You can <a href="' . $this->settings['ravenGetPasswordUrl'] . '" target="_blank">obtain your Raven password</a> from the University Computing Service immediately if you do not yet have it.</p>';
+		$html .= "\n" . '<p>If you have <strong>forgotten</strong> your Raven password, you will need to <a href="' . $this->settings['ravenResetPasswordUrl'] . '" target="_blank">request a new one</a> from the central University Computing Service.</p>';
 		$html .= "\n" . '<h3 id="security">Security</h3>';
 		$html .= "\n" . "<p>Various security and auditing mechanisms are in place. " . ($_SERVER['_SERVER_PROTOCOL_TYPE'] == 'http' ? "Submissions are sent using HTTP as the server does not currently have an SSL certificate, although the Raven authentication stage is transmitted using HTTPS." : 'Submissions are encrypted using HTTPS.') . " Please <a href=\"{$this->baseUrl}/feedback.html\">contact us</a> if you have any questions on security.</p>";
 		$html .= "\n" . '<p>Attempts to add Javascript or HTML tags to submitted data will fail.</p>';
@@ -1049,18 +1063,16 @@ class frontControllerApplication
 	# Function to provide cookie-based login internally
 	function loadInternalAuth ()
 	{
-		# End if not required
-		if (!$this->settings['internalAuth']) {return false;}
-		
 		# Assemble the settings to use
 		$internalAuthSettings = array (
-			'salt'					=> $this->settings['internalAuthSalt'],
-			'baseUrl'				=> $this->baseUrl,
-			'loginUrl'				=> '/logininternal.html',
-			'logoutUrl'				=> '/logoutinternal.html',
-			'database'				=> $this->settings['database'],
-			'applicationName'		=> $this->settings['applicationName'],
-			'administratorEmail'	=> $this->settings['administratorEmail'],
+			'salt'								=> $this->settings['internalAuthSalt'],
+			'baseUrl'							=> $this->baseUrl,
+			'loginUrl'							=> '/logininternal.html',
+			'logoutUrl'							=> '/logoutinternal.html',
+			'database'							=> $this->settings['database'],
+			'applicationName'					=> $this->settings['applicationName'],
+			'administratorEmail'				=> $this->settings['administratorEmail'],
+			'passwordRequiresLettersAndNumbers'	=> $this->settings['internalAuthPasswordRequiresLettersAndNumbers'],
 		);
 		
 		# Load the user account system
@@ -1117,8 +1129,8 @@ class frontControllerApplication
 				
 				# E-mail the new user
 				$applicationName = ucfirst (strip_tags ($this->settings['h1'] ? $this->settings['h1'] : $this->settings['applicationName']));
-				$message = "\nDear {$result['forename']},\n\nI have added you as having administrative rights for this facility.\n\nYou can log in using the following credentials:\n\nLogin at:    {$_SERVER['_SITE_URL']}{$this->baseUrl}/\nLogin type:  Raven login\nUsername:    {$result[$usernameField]}\nPassword:    [Your Raven password]\n\n\nPlease let me know if you have any questions.";
-				application::utf8Mail ($result[$usernameField] . '@cam.ac.uk', $applicationName, wordwrap ($message), "From: {$this->userEmail}");
+				$message = "\nDear {$result['forename']},\n\nI have given you administrative rights for this facility.\n\nYou can log in using the following credentials:\n\nLogin at:    {$_SERVER['_SITE_URL']}{$this->baseUrl}/\nLogin type:  Raven login\nUsername:    {$result[$usernameField]}\nPassword:    [Your Raven password]\n\n\nPlease let me know if you have any questions.";
+				application::utf8Mail ($result['email'], $applicationName, wordwrap ($message), "From: {$this->userEmail}");
 				echo "\n<p class=\"success\">An e-mail giving the login details has been sent to the new user.</p>";
 			}
 		}
@@ -1250,7 +1262,8 @@ class frontControllerApplication
 		if ($this->settings['page404']) {
 			include ($this->settings['page404']);
 		} else {
-			echo "<p>Sorry, that page was not found. Please check the URL or use the menu to navigate elsewhere.</p>";
+			echo "\n<h2>Page not found</h2>";
+			echo "\n<p>Sorry, that page was not found. Please check the URL or use the menu to navigate elsewhere.</p>";
 		}
 		return false;
 	}
