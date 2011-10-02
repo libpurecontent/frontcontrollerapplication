@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.4.1
+# Version 1.4.2
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -785,10 +785,10 @@ class frontControllerApplication
 	function userIsAdministrator ()
 	{
 		# Return NULL if no user
-		if (!$this->user || !$this->administrators) {return NULL;}
+		if (!$this->userVisibleIdentifier || !$this->administrators) {return NULL;}
 		
 		# Return boolean whether the user is in the list
-		return (array_key_exists ($this->user, $this->administrators));
+		return (array_key_exists ($this->userVisibleIdentifier, $this->administrators));
 	}
 	
 	
