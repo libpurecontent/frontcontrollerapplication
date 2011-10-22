@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.4.2
+# Version 1.4.3
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -299,7 +299,7 @@ class frontControllerApplication
 		
 		# Show login status
 		#!# Should have urlencode also?
-		$location = htmlspecialchars ($_SERVER['REQUEST_URI']);
+		$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: http://stackoverflow.com/questions/940905
 		$this->ravenUser = !substr_count ($this->user, '@');
 		$logoutUrl = 'logout.html';
 		$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/login.html?{$location}\">logged in</a>";
@@ -1032,23 +1032,24 @@ class frontControllerApplication
 		
 		# Widgets
 		$form->textarea (array (
-			'name'			=> 'message',
-			'title'					=> 'Message',
-			'required'				=> true,
-			'cols'				=> 40,
+			'name'		=> 'message',
+			'title'		=> 'Message',
+			'required'	=> true,
+			'cols'		=> 55,
+			'default' 	=> (isSet ($_GET['message']) ? $_GET['message'] : false),
 		));
 		$form->input (array (
-			'name'			=> 'name',
-			'title'					=> 'Your name',
-			'required'				=> true,
-			'default'		=> ($this->settings['useCamUniLookup'] && $this->user && ($userLookupData = camUniData::getLookupData ($this->user)) ? $userLookupData['name'] : ''),
+			'name'		=> 'name',
+			'title'		=> 'Your name',
+			'required'	=> true,
+			'default'	=> ($this->settings['useCamUniLookup'] && $this->user && ($userLookupData = camUniData::getLookupData ($this->user)) ? $userLookupData['name'] : ''),
 		));
 		$form->email (array (
-			'name'			=> 'contacts',
-			'title'					=> 'E-mail',
-			'required'				=> true,
-			'default' => ($this->userVisibleIdentifier ? $this->userVisibleIdentifier . ($this->settings['internalAuth'] ? '' : '@' . $this->settings['emailDomain']) : ''),	// internalAuth will result in e-mail addresses not usernames
-			'editable' => (!$this->user),
+			'name'		=> 'contacts',
+			'title'		=> 'E-mail',
+			'required'	=> true,
+			'default'	=> ($this->userVisibleIdentifier ? $this->userVisibleIdentifier . ($this->settings['internalAuth'] ? '' : '@' . $this->settings['emailDomain']) : ''),	// internalAuth will result in e-mail addresses not usernames
+			'editable'	=> (!$this->user),
 		));
 		
 		# Set the processing options
@@ -1113,6 +1114,7 @@ class frontControllerApplication
 			'includeOnly' => array ($usernameField, 'forename', 'surname', 'name', 'email', 'privilege'),
 			'attributes' => array (
 				$usernameField => array ('current' => array_keys ($this->administrators)),
+				'email' => array ('type' => 'email', ),
 		)));
 		
 		# Process the form
