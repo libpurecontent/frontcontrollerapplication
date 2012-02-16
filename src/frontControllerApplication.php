@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.4.3
+# Version 1.4.4
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -1008,7 +1008,7 @@ class frontControllerApplication
 		# Start the HTML
 		$html  = "\n<div class=\"basicbox\">";
 		$html .= "\n<p>There have been <strong>" . count ($changes) . "</strong> updates to the database.<br />Only <strong>the most recent {$this->settings['showChanges']} changes</strong> are shown below.</p>";
-		$html .= "\n<p>IMPORTANT NOTE: This does not include changes manually to the database directly (e.g. using PhpMyAdmin - it only covers changes submitted via the webforms in this system itself.</p>";
+		$html .= "\n<p>IMPORTANT NOTE: This does not include changes manually to the database directly (e.g. using PhpMyAdmin) - it only covers changes submitted via the webforms in this system itself.</p>";
 		$html .= "\n</div>";
 		$html .= "\n" . implode ("\n\n", $changesHtml);
 		
@@ -1097,57 +1097,77 @@ class frontControllerApplication
 			}
 		}
 		
-		# Add an administrator form
-		echo "\n<div class=\"{$boxClass}\">";
-		echo "\n<h3 id=\"add\">Add an administrator" . ($this->settings['externalAuth'] ? ' (Raven login)' : '') . '</h3>';
-		$form = new form (array (
-			'name' => 'add',
-			'submitTo' => '#add',
-			'formCompleteText' => false,
-			'div' => false,
-			'databaseConnection'	=> $this->databaseConnection,
-		));
-		$form->dataBinding (array (
-			'database' => $this->settings['database'],
-			#!# This could cause problems
-			'table' => $this->settings['administrators'],
-			'includeOnly' => array ($usernameField, 'forename', 'surname', 'name', 'email', 'privilege'),
-			'attributes' => array (
-				$usernameField => array ('current' => array_keys ($this->administrators)),
-				'email' => array ('type' => 'email', ),
-		)));
+		# Start the HTML
+		$html  = '';
 		
-		# Process the form
-		if ($result = $form->process ()) {
-			if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], $result)) {
-				
-				# Deal with variance in the fieldnames
-				$result['privilege'] = (isSet ($result['privilege']) ? $result['privilege'] : 'Administrator');
-				$result['forename'] = (isSet ($result['forename']) ? $result['forename'] : $result[$usernameField]);
-				
-				# Confirm success and reload the list
-				echo "\n<p>" . htmlspecialchars ($result[$usernameField]) . ' has been added as ' . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
-				$this->administrators = $this->getAdministrators ();
-				
-				# E-mail the new user
-				$applicationName = ucfirst (strip_tags ($this->settings['h1'] ? $this->settings['h1'] : $this->settings['applicationName']));
-				$message = "\nDear {$result['forename']},\n\nI have given you administrative rights for this facility.\n\nYou can log in using the following credentials:\n\nLogin at:    {$_SERVER['_SITE_URL']}{$this->baseUrl}/\nLogin type:  Raven login\nUsername:    {$result[$usernameField]}\nPassword:    [Your Raven password]\n\n\nPlease let me know if you have any questions.";
-				application::utf8Mail ($result['email'], $applicationName, wordwrap ($message), "From: {$this->userEmail}");
-				echo "\n<p class=\"success\">An e-mail giving the login details has been sent to the new user.</p>";
+		# Add an administrator form
+		$html .= $this->administratorsAdd ($boxClass, $usernameField);
+		
+		# Delete an administrator form
+		$html .= $this->administratorsDelete ($boxClass, $usernameField);
+		
+		# Show current administrators
+		$html .= $this->administratorsShow ($boxClass, $usernameField, $showFields);
+		
+		# Show the HTML
+		echo $html;
+	}
+	
+	
+	# Helper function to add an administrator
+	private function administratorsAdd ($boxClass, $usernameField)
+	{
+		# Start the HTML
+		$html  = '';
+		
+		# Compile the HTML
+		if (true) {
+			$authSystemName = 'Raven';
+			if ($this->settings['internalAuth']) {
+				$authSystemName = 'Password';
 			}
+			$html .= "\n<div class=\"{$boxClass}\">";
+			$html .= "\n<h3 id=\"add" . strtolower ($authSystemName) . "\">Add an administrator ({$authSystemName} login)</h3>";
+			$form = new form (array (
+				'name' => 'add' . strtolower ($authSystemName),
+				'submitTo' => '#add' . strtolower ($authSystemName),
+				'formCompleteText' => false,
+				'div' => false,
+				'databaseConnection'	=> $this->databaseConnection,
+				'displayRestrictions' => false,
+				'requiredFieldIndicator' => false,
+			));
+			$form->dataBinding (array (
+				'database' => $this->settings['database'],
+				#!# This could cause problems
+				'table' => $this->settings['administrators'],
+				'includeOnly' => array ($usernameField, 'forename', 'surname', 'name', 'email', 'privilege'),
+				'attributes' => array (
+					$usernameField => array ('current' => array_keys ($this->administrators)),
+					'email' => array ('type' => 'email', ),
+			)));
+			
+			# Process the form
+			if ($result = $form->process ($html)) {
+				
+				# Add and inform the new administrator
+				$html .= $this->processNewAdministrator ($result, $usernameField, $authSystemName);
+			}
+			$html .= "\n" . '</div>';
 		}
-		echo "\n" . '</div>';
 		
 		# Add an external administrator form, if using the external auth option
 		#!# Refactor to use dataBinding by combining with the above code
 		if ($this->settings['externalAuth']) {
-			echo "\n<div class=\"{$boxClass}\">";
-			echo "\n<h3 id=\"addexternal\">Add an external administrator</h3>";
+			$authSystemName = 'Friends';
+			$html .= "\n<div class=\"{$boxClass}\">";
+			$html .= "\n<h3 id=\"add" . strtolower ($authSystemName) . "\">Add an administrator ({$authSystemName} login)</h3>";
 			$form = new form (array (
-				'name' => 'addexternal',
-				'submitTo' => '#addexternal',
+				'name' => 'add' . strtolower ($authSystemName),
+				'submitTo' => '#add' . strtolower ($authSystemName),
 				'formCompleteText' => false,
 				'div' => false,
+				'databaseConnection'	=> $this->databaseConnection,
 				'displayRestrictions' => false,
 				'requiredFieldIndicator' => false,
 			));
@@ -1177,35 +1197,72 @@ class frontControllerApplication
 			));
 			$form->select (array (
 				'name'			=> 'privilege',
-				'title'			=> 'Privilege level',
+				'title'			=> 'Administrator level',
 				'values'		=> array ('Administrator', 'Restricted administrator'),
 				'default'		=> 'Administrator',
 				'required'		=> true,
 			));
-			if ($result = $form->process ()) {
-				if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], array ($usernameField => $result['email'], 'password' => crypt ($result['password']), 'userType' => 'External', 'forename' => $result['forename'], 'surname' => $result['surname'], 'privilege' => $result['privilege']))) {
-					
-					# Confirm success and reload the list
-					echo "\n<p>" . htmlspecialchars ($result[$usernameField]) . ' has been added as an external ' . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
-					$this->administrators = $this->getAdministrators ();
-					
-					# E-mail the new user
-					$applicationName = ucfirst (strip_tags ($this->settings['h1'] ? $this->settings['h1'] : $this->settings['applicationName']));
-					$message = "\nDear {$result['forename']},\n\nI have added you as having administrative rights for this facility.\n\nYou can log in using the following credentials:\n\nLogin at:    {$_SERVER['_SITE_URL']}{$this->baseUrl}/\nLogin type:  Friends login\nUsername:    {$result['email']}\nPassword:    {$result['password']}\n\n\nPlease let me know if you have any questions.";
-					application::utf8Mail ($result['email'], $applicationName, wordwrap ($message), "From: {$this->userEmail}");
-					echo "\n<p class=\"success\">An e-mail giving the login details has been sent to the new user.</p>";
-				}
+			if ($result = $form->process ($html)) {
+				
+				# Encrypt the password
+				$result['password'] = crypt ($result['password']);
+				
+				# Add in fixed data
+				$result[$usernameField] = $result['email'];
+				$result['userType'] = 'External';
+				
+				# Add and inform the new administrator
+				$html .= $this->processNewAdministrator ($result, $usernameField, $authSystemName);
 			}
-			echo "\n" . '</div>';
+			$html .= "\n" . '</div>';
 		}
 		
-		# Delete an administrator form
-		echo "\n<div class=\"{$boxClass}\">";
-		echo "\n<h3 id=\"remove\">Remove an administrator</h3>";
+		# Return the HTML
+		return $html;
+	}
+	
+	
+	# Helper function to process a new administrator
+	private function processNewAdministrator ($result, $usernameField, $authSystemName)
+	{
+		# Start the HTML
+		$html  = '';
+		
+		# Insert the data
+		if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], $result)) {
+			
+			# Deal with variance in the fieldnames
+			$result['privilege'] = (isSet ($result['privilege']) ? $result['privilege'] : 'Administrator');
+			$result['forename'] = (isSet ($result['forename']) ? $result['forename'] : $result[$usernameField]);
+			$result['password'] = (isSet ($result['password']) ? $result['password'] : "[Your {$authSystemName} password]");
+			$result['userType'] = (isSet ($result['userType']) ? $result['userType'] : 'Raven');
+			
+			# Confirm success and reload the list
+			$html .= "\n<p>" . htmlspecialchars ($result[$usernameField]) . ' has been added as an ' . ($result['userType'] == 'External' ? 'external ' : '') . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
+			$this->administrators = $this->getAdministrators ();
+			
+			# E-mail the new user
+			$applicationName = ucfirst (strip_tags ($this->settings['h1'] ? $this->settings['h1'] : $this->settings['applicationName']));
+			$message = "\nDear {$result['forename']},\n\nI have given you administrative rights for this facility.\n\nYou can log in using the following credentials:\n\nLogin at:    {$_SERVER['_SITE_URL']}{$this->baseUrl}/\nLogin type:  {$authSystemName} login\nUsername:    {$result[$usernameField]}\nPassword:    {$result['password']}\n\n\nPlease let me know if you have any questions.";
+			application::utf8Mail ($result['email'], $applicationName, wordwrap ($message), "From: {$this->userEmail}");
+			$html .= "\n<p class=\"success\">An e-mail giving the login details has been sent to the new user.</p>";
+		}
+		
+		# Return the HTML
+		return $html;
+	}
+	
+	
+	# Helper function to delete an administrator
+	private function administratorsDelete ($boxClass, $usernameField)
+	{
+		# Compile the HTML
+		$html  = "\n<div class=\"{$boxClass}\">";
+		$html .= "\n<h3 id=\"remove\">Remove an administrator</h3>";
 		$administrators = $this->administrators;
 		//unset ($administrators[$this->user]);	// Remove current user - you can't delete yourself
 		if (!$administrators) {
-			echo "<p>There are no other administrators.</p>";
+			$html .= "<p>There are no other administrators.</p>";
 		} else {
 			$form = new form (array (
 				'name' => 'remove',
@@ -1226,31 +1283,43 @@ class frontControllerApplication
 				'required'		=> true,
 			));
 			$form->validation ('same', array ($usernameField, 'confirm'));
-			if ($result = $form->process ()) {
+			if ($result = $form->process ($html)) {
 				if ($this->databaseConnection->delete ($this->settings['database'], $this->settings['administrators'], array ($usernameField => $result[$usernameField]))) {
-					echo "\n<p>" . htmlspecialchars ($result[$usernameField]) . " is no longer as an administrator. <a href=\"\">Reset page.</a></p>";
+					$html .= "\n<p>" . htmlspecialchars ($result[$usernameField]) . " is no longer as an administrator. <a href=\"\">Reset page.</a></p>";
 					$this->administrators = $this->getAdministrators ();
 				} else {
-					echo "\n<p class=\"warning\">There was a problem deleting the administrator. (Probably 'delete' privileges are not enabled for this table. Please contact the main administrator of the system.</p>";
+					$html .= "\n<p class=\"warning\">There was a problem deleting the administrator. (Probably 'delete' privileges are not enabled for this table. Please contact the main administrator of the system.</p>";
 				}
 			}
 		}
-		echo "\n" . '</div>';
+		$html .= "\n" . '</div>';
 		
-		# Show current administrators
-		echo "\n<div class=\"{$boxClass}\">";
-		echo "\n<h3 id=\"list\">List current administrators</h3>";
+		# Return the HTML
+		return $html;
+	}
+	
+	
+	
+	# Helper function to show the current administrators
+	private function administratorsShow ($boxClass, $usernameField, $showFields)
+	{
+		# Compile the HTML
+		$html  = "\n<div class=\"{$boxClass}\">";
+		$html .= "\n<h3 id=\"list\">List current administrators</h3>";
 		if (!$this->administrators) {
-			echo "\n<p>There are no administrators set up yet.</p>";
+			$html .= "\n<p>There are no administrators set up yet.</p>";
 		} else {
-			echo "\n<p>The following are administrators of this system and can make changes to the data in it:</p>";
+			$html .= "\n<p>The following are administrators of this system and can make changes to the data in it:</p>";
 			$onlyFields = array_merge (array ($usernameField), array_keys ($showFields));
 			if ($this->settings['externalAuth']) {$onlyFields[] = 'userType';}
 			$tableHeadingSubstitutions = $showFields;
 			$tableHeadingSubstitutions[$usernameField] = 'Username';
-			echo application::htmlTable ($this->administrators, $tableHeadingSubstitutions, $class = 'lines', $showKey = false, $uppercaseHeadings = true, false, false, false, false, $onlyFields);
+			$html .= application::htmlTable ($this->administrators, $tableHeadingSubstitutions, $class = 'lines', $showKey = false, $uppercaseHeadings = true, false, false, false, false, $onlyFields);
 		}
-		echo "\n" . '</div>';
+		$html .= "\n" . '</div>';
+		
+		# Return the HTML
+		return $html;
 	}
 	
 	
