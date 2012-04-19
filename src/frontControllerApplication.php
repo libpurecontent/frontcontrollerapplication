@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.4.4
+# Version 1.5.0
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -28,6 +28,12 @@ class frontControllerApplication
 			'description' => 'Feedback/contact form',
 			'url' => 'feedback.html',
 			'tab' => 'Feedback',
+		),
+		'editing' => array (
+			'description' => false,
+			'url' => 'data/',
+			'tab' => '<img src="/images/icons/pencil.png" alt="" class="icon" /> Data editing',
+			'administrator' => true,
 		),
 		'admin' => array (
 			'description' => 'Administrative options for authorised administrators',
@@ -269,7 +275,7 @@ class frontControllerApplication
 		}
 		
 		# Move feedback and admin to the end
-		$functions = array ('feedback', 'help', 'admin');
+		$functions = array ('editing', 'feedback', 'help', 'admin');
 		foreach ($functions as $function) {
 			if (isSet ($this->actions[$function])) {
 				$temp{$function} = $this->actions[$function];
@@ -459,6 +465,7 @@ class frontControllerApplication
 			'revealAdminFunctions'							=> false,	// Whether to show admins-only tabs etc to non-administrators
 			'useFeedback'									=> true,
 			'helpTab'										=> false,
+			'useEditing'									=> false,	// Whether to enable editing as a main tab
 			'debug'											=> false,	# Whether to switch on debugging info
 			'minimumPhpVersion'								=> '5.1.0',	// PDO supported in 5.1 and above
 			'showChanges'									=> 25,		// Number of most recent changes to show in log file
@@ -521,9 +528,10 @@ class frontControllerApplication
 			$actions = $this->globalActions;
 		}
 		
-		# Remove admin/feedback if required
+		# Remove admin/feedback/editing if required
 		if (!$this->settings['useAdmin']) {unset ($actions['admin']);}
 		if (!$this->settings['useFeedback']) {unset ($actions['feedback']);}
+		if (!$this->settings['useEditing']) {unset ($actions['editing']);}
 		
 		# Remove tabs if necessary
 		if (!$this->settings['helpTab']) {unset ($actions['help']['tab']);}
@@ -1344,6 +1352,66 @@ class frontControllerApplication
 	function home ()
 	{
 		$html  = "<p>Welcome</p>";
+		
+		# Show the HTML
+		echo $html;
+	}
+	
+	
+	# Admin editing section, substantially delegated to the sinenomine editing component
+	# Needs adding to httpd.conf, where $applicationBaseUrl is not slash-terminated
+	#	Use MacroSinenomineEmbeddedWholeDb "$applicationBaseUrl" "/data" "editing"
+	public function editing ($attributes = array (), $deny = false /* or supply an array */)
+	{
+		# If there are no deny table entries, and an array (empty/full) has not been supplied, deny the administrators table by default
+		if (!$deny && !is_array ($deny)) {
+			$deny = array ();
+			$deny[$this->settings['database']] = array (
+				'administrators',
+			);
+		}
+		
+		# Start the HTML
+		$html  = '';
+		
+		# Define the settings
+		$settings = array (
+			'database' => $this->settings['database'],
+			'table' => false,
+			'administratorEmail' => $this->settings['administratorEmail'],
+			'userIsAdministrator' => $this->userIsAdministrator,
+			'application' => __CLASS__,
+			'baseUrl' => $this->baseUrl . '/data',
+			'attributes' => (isSet ($attributes) ? $attributes : array ()),
+			'exclude' => (isSet ($exclude) ? $exclude : false),
+			'displayErrorDebugging' => false,
+			'lookupFunctionParameters' => array (true), // Ensures that the abstract ID is shown
+			'validation' => (isSet ($validation) ? $validation : false),
+			'pagination' => 250,
+			'rewrite' => true,
+			'showMetadata' => false,
+			'hideTableIntroduction' => true,
+			'fieldFiltering' => "{$this->settings['database']}.administrators.username__JOIN__people__people__reserved.{$this->user}.state",
+			'deny' => $deny,
+			'denyAdministratorOverride' => false,
+			'tableCommentsInSelectionList' => true,
+		);
+		
+		# Load and run the database editing
+		require_once ('sinenomine.php');
+		$sinenomine = new sinenomine ($settings, $this->databaseConnection);
+		
+		# Set constraints
+		if ($attributes) {
+			foreach ($attributes as $attribute) {
+				$sinenomine->attributes ($attribute[0], $attribute[1], $attribute[2], $attribute[3]);
+			}
+		}
+		
+		# Process
+		$sinenomine->process ();
+		$html .= $sinenomine->getContentCss (true);
+		$html .= $sinenomine->getHtml ();
 		
 		# Show the HTML
 		echo $html;
