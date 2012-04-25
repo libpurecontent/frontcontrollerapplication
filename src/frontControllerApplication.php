@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.5.0
+# Version 1.5.1
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -1333,13 +1333,19 @@ class frontControllerApplication
 	
 	# 404 page
 	#!# Needs to have a customised message mode
-	function page404 ()
+	function page404 ($includePureContentHeaderFooter = false)
 	{
 		# End here
 		#!# Currently this is visible within the tabs
 		application::sendHeader (404);
 		if ($this->settings['page404']) {
+			if ($includePureContentHeaderFooter) {
+				include ('pureContentWrapper.php');
+			}
 			include ($this->settings['page404']);
+			if ($includePureContentHeaderFooter) {
+				include ('sitetech/appended.html');
+			}
 		} else {
 			echo "\n<h2>Page not found</h2>";
 			echo "\n<p>Sorry, that page was not found. Please check the URL or use the menu to navigate elsewhere.</p>";
