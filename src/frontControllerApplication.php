@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.5.1
+# Version 1.5.2
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -1240,6 +1240,7 @@ class frontControllerApplication
 		if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], $result)) {
 			
 			# Deal with variance in the fieldnames
+			$result['email'] = (isSet ($result['email']) ? $result['email'] : $result[$usernameField] . "@{$this->settings['emailDomain']}");
 			$result['privilege'] = (isSet ($result['privilege']) ? $result['privilege'] : 'Administrator');
 			$result['forename'] = (isSet ($result['forename']) ? $result['forename'] : $result[$usernameField]);
 			$result['password'] = (isSet ($result['password']) ? $result['password'] : "[Your {$authSystemName} password]");
