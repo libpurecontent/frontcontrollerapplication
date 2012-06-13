@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.5.2
+# Version 1.5.3
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -428,7 +428,7 @@ class frontControllerApplication
 	{
 		# Specify available arguments as defaults or as NULL (to represent a required argument)
 		$this->globalDefaults = array (
-			'applicationName'								=> application::changeCase (get_class ($this)),
+			'applicationName'								=> application::unCamelCase (get_class ($this)),
 			'authentication' 								=> false,		// Whether all pages require authentication
 			'dataDisableAuth'								=> false,		// Whether to disable auth on the data function (only relevant when using authentication=true); this can cause logout due to fast cookie transfer
 			'externalAuth'									=> false,		// Allow external authentication/authorisation
@@ -447,7 +447,7 @@ class frontControllerApplication
 			'vendor'										=> 'mysql',	// Database vendor
 			'peopleDatabase'								=> 'people',
 			'table'											=> NULL,
-			'administrators'								=> false,	// Administrators database e.g. 'administrators' or 'facility.administrators'
+			'administrators'								=> false,	// Administrators table e.g. 'administrators' or 'facility.administrators'
 			'logfile'										=> './logfile.txt',
 			'webmaster'										=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
 			'administratorEmail'							=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
@@ -483,7 +483,7 @@ class frontControllerApplication
 		);
 		
 		# Merge application defaults with the standard application defaults, with preference: constructor settings, application defaults, frontController application defaults
-		$defaults = array_merge ($this->globalDefaults, $this->defaults (), $settings);
+		$defaults = array_merge ($this->globalDefaults, $this->defaults ($settings), $settings);
 		
 		# Remove database settings if not being used
 		if (isSet ($defaults['useDatabase']) && !$defaults['useDatabase']) {
@@ -510,7 +510,7 @@ class frontControllerApplication
 	
 	
 	# Skeleton function to get local actions
-	function defaults ()
+	function defaults ($suppliedUncleanedSettings = false /* Occasionally useful to be able to read the supplied settings when overriding the defaults */)
 	{
 		return $this->defaults;
 	}
