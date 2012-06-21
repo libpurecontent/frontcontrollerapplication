@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.5.3
+# Version 1.5.4
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -141,6 +141,15 @@ class frontControllerApplication
 		# Function to merge the arguments; note that $errors returns the errors by reference and not as a result from the method
 		#!# Ideally the start and end div would surround these items before $this->action is determined, but that would break external type handling
 		if (!$this->settings = application::assignArguments ($errors, $settings, $this->defaults, get_class ($this), NULL, $handleErrors = true)) {return false;}
+		
+		# If a password setting is supplied, and it appears to be a full path, assume it is a file to be read, not the password string itself
+		if ($this->settings['password']) {
+			if (substr ($this->settings['password'], 0, 1) == '/') {
+				if (is_readable ($this->settings['password'])) {
+					$this->settings['password'] = trim (file_get_contents ($this->settings['password']));
+				}
+			}
+		}
 		
 		# Load camUniData if required
 		if ($this->settings['useCamUniLookup']) {
@@ -613,6 +622,9 @@ class frontControllerApplication
 			if ($this->actions[$action]['url'] !== false) {
 				$tabs[$action] .= "<a href=\"{$url}\"" . (array_key_exists ('description', $this->actions[$this->action]) ? ' title="' . trim (strip_tags ($attributes['description'])) . '"' : '') . (isSet ($attributes['linkId']) ? " id=\"{$attributes['linkId']}\"" : '') . ">";
 			}
+			if (isSet ($this->actions[$action]['icon'])) {
+				$tabs[$action] .= $this->icon ($this->actions[$action]['icon']);
+			}
 			$tabs[$action] .= $attributes['tab'];
 			if ($this->actions[$action]['url'] !== false) {
 				$tabs[$action] .= '</a>';
@@ -630,6 +642,14 @@ class frontControllerApplication
 		
 		# Return the HTML
 		return $html;
+	}
+	
+	
+	# Function to create an icon
+	public function icon ($icon)
+	{
+		# NB The icon location is absolute at present; could add setting in future if required
+		return '<img src="' . '/images/icons/' . $icon . '.png" alt="" class="icon" /> ';
 	}
 	
 	
@@ -738,8 +758,11 @@ class frontControllerApplication
 			# Convert the URL to insert an item number if relevant
 			$attributes['url'] = str_replace ('%id', $this->item, $attributes['url']);
 			
+			# Add an icon if required
+			$icon = (isSet ($attributes['icon']) ? $this->icon ($attributes['icon']) : '');
+			
 			#!# subtab is hard-coded at present
-			$items[$action] = "<a href=\"{$this->baseUrl}/{$attributes['url']}\" title=\"{$attributes['description']}\">{$text}</a>";
+			$items[$action] = "<a href=\"{$this->baseUrl}/{$attributes['url']}\" title=\"{$attributes['description']}\">{$icon}{$text}</a>";
 		}
 		
 		# Compile the HTML
