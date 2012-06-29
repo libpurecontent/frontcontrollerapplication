@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.5.5
+# Version 1.5.6
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -117,7 +117,7 @@ class frontControllerApplication
 	var $globalDefaults = array ();
 	
 	# User status (an optional way of adding (...) after the username in the login corner
-	var $userStatus = false;
+	private $userStatus = false;
 	
 	# Internal auth
 	var $internalAuthClass = NULL;
@@ -251,6 +251,14 @@ class frontControllerApplication
 			$this->restrictedAdministrator = ((isSet ($this->administrators[$this->user]['privilege']) && ($this->administrators[$this->user]['privilege'] == 'Restricted administrator')) ? true : NULL);
 		}
 		
+		# Additional processing, before actions, if required
+		if (method_exists ($this, 'mainPreActions')) {
+			if ($this->mainPreActions () === false) {
+				echo $endDiv;
+				return false;
+			}
+		}
+		
 		# Get the available actions
 		$this->actions = $this->assignActions ();
 		
@@ -375,10 +383,24 @@ class frontControllerApplication
 			}
 		}
 		
-		# Check administrator credentials if necessary
+		# Check restricted administrator credentials if necessary
 		if (isSet ($this->actions[$this->action]['restrictedAdministrator']) && ($this->actions[$this->action]['restrictedAdministrator'])) {
 			if (!$this->userIsAdministrator && !$this->restrictedAdministrator) {
 				echo "\n<p><strong>You need to be logged on as an restricted administrator to access this section.</strong></p>";
+				echo $endDiv;
+				return false;
+			}
+		}
+		
+		# Check specific privilege credentials if necessary
+		if (isSet ($this->actions[$this->action]['privilege']) && ($this->actions[$this->action]['privilege'])) {
+			$privilegeProperty = $this->actions[$this->action]['privilege'];
+			if (!$this->userIsAdministrator && !$this->$privilegeProperty) {	// Assumes that restrictedAdministrator is not enough
+				if ($this->user) {
+					echo "\n<p><strong>You do not have the required privilege to access this section.</strong></p>";
+				} else {
+					echo "\n<p><strong>You need to log in before you can access this facility.</strong></p>";
+				}
 				echo $endDiv;
 				return false;
 			}
@@ -529,6 +551,13 @@ class frontControllerApplication
 	}
 	
 	
+	# Setter function to set the userStatus text
+	function setUserStatus ($string)
+	{
+		$this->userStatus = $string;
+	}
+	
+	
 	# Skeleton function to get local actions
 	function defaults ($suppliedUncleanedSettings = false /* Occasionally useful to be able to read the supplied settings when overriding the defaults */)
 	{
@@ -615,6 +644,14 @@ class frontControllerApplication
 					if (!$this->settings['revealAdminFunctions']) {
 						continue;
 					}
+				}
+			}
+			
+			# Skip if the user doesn't have a specifically-defined privilege
+			if (isSet ($attributes['privilege']) && ($attributes['privilege'])) {
+				$privilegeProperty = $attributes['privilege'];
+				if (!$this->userIsAdministrator && !$this->$privilegeProperty) {	// Assumes that restrictedAdministrator is not enough
+					continue;
 				}
 			}
 			
@@ -1094,7 +1131,7 @@ class frontControllerApplication
 	
 	
 	# Settings form
-	private function settings ()
+	private function settings ($dataBindingAttributes = array ())
 	{
 		# Start the HTML
 		$html = '';
@@ -1110,6 +1147,7 @@ class frontControllerApplication
 			'table' => $this->settings['settingsTable'],
 			'intelligence' => true,
 			'data' => $this->settings,
+			'attributes' => $dataBindingAttributes,
 		));
 		
 		# Process the form
