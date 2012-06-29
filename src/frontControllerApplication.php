@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.5.4
+# Version 1.5.5
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -56,6 +56,13 @@ class frontControllerApplication
 			'parent' => 'admin',
 			'subtab' => 'History',
 			'restrictedAdministrator' => true,
+		),
+		'settings' => array (
+			'description' => 'Settings',
+			'url' => 'settings.html',
+			'administrator' => true,
+			'parent' => 'admin',
+			'subtab' => 'Settings',
 		),
 		'login' => array (
 			'description' => 'Login',
@@ -234,6 +241,9 @@ class frontControllerApplication
 		#!# Should disable system or force entry if no administrators
 		$this->administrators = $this->getAdministrators ();
 		$this->userIsAdministrator = $this->userIsAdministrator ();
+		
+		# Get the settings from the settings table, if required
+		$this->addSettingsTableConfig ();
 		
 		# Determine the administrator privilege level if the database table supports this
 		$this->restrictedAdministrator = NULL;
@@ -457,6 +467,7 @@ class frontControllerApplication
 			'peopleDatabase'								=> 'people',
 			'table'											=> NULL,
 			'administrators'								=> false,	// Administrators table e.g. 'administrators' or 'facility.administrators'
+			'settingsTable'									=> 'settings',	// Settings table (must be in the main database) e.g. 'settings' or false to disable (only needed a table of that name is present for a different purpose)
 			'logfile'										=> './logfile.txt',
 			'webmaster'										=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
 			'administratorEmail'							=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
@@ -537,10 +548,12 @@ class frontControllerApplication
 			$actions = $this->globalActions;
 		}
 		
-		# Remove admin/feedback/editing if required
+		# Remove admin/feedback/editing/settings if required
+		#!# The admin system should just be automatically enabled if the table is present, like settings is
 		if (!$this->settings['useAdmin']) {unset ($actions['admin']);}
 		if (!$this->settings['useFeedback']) {unset ($actions['feedback']);}
 		if (!$this->settings['useEditing']) {unset ($actions['editing']);}
+		if (!$this->enableSettingsSubtab) {unset ($actions['settings']);}
 		
 		# Remove tabs if necessary
 		if (!$this->settings['helpTab']) {unset ($actions['help']['tab']);}
@@ -812,6 +825,38 @@ class frontControllerApplication
 	}
 	
 	
+	# Function to get settings table config
+	private function addSettingsTableConfig ()
+	{
+		# Assume there is no such table
+		$this->enableSettingsSubtab = false;
+		
+		# End if the application does not have database support
+		if (!$this->settings['useDatabase']) {return false;}
+		
+		# End if the application does not use a database of additional settings
+		if (!$this->settings['settingsTable']) {return false;}
+		
+		# Get the tables
+		$tables = $this->databaseConnection->getTables ($this->settings['database'], $this->settings['settingsTable']);
+		
+		# End if not in the list
+		if (!in_array ($this->settings['settingsTable'], $tables)) {return false;}
+		
+		# Get the settings
+		if (!$settingsFromTable = $this->databaseConnection->selectOne ($this->settings['database'], $this->settings['settingsTable'], array ('id' => 1))) {return false;}
+		
+		# Merge in the settings, ignoring the id, and overwriting anything currently present
+		foreach ($settingsFromTable as $key => $value) {
+			if ($key == 'id') {continue;}
+			$this->settings[$key] = $value;
+		}
+		
+		# Enable the settings subtab
+		$this->enableSettingsSubtab = true;
+	}
+	
+	
 	# Function to determine if the user is an administrator
 	function userIsAdministrator ()
 	{
@@ -1042,6 +1087,40 @@ class frontControllerApplication
 		$html .= "\n<p>IMPORTANT NOTE: This does not include changes manually to the database directly (e.g. using PhpMyAdmin) - it only covers changes submitted via the webforms in this system itself.</p>";
 		$html .= "\n</div>";
 		$html .= "\n" . implode ("\n\n", $changesHtml);
+		
+		# Show the HTML
+		echo $html;
+	}
+	
+	
+	# Settings form
+	private function settings ()
+	{
+		# Start the HTML
+		$html = '';
+		
+		# Databind a form
+		$form = new form (array (
+			'databaseConnection'	=> $this->databaseConnection,
+			'reappear' => true,
+			'formCompleteText' => false,
+		));
+		$form->dataBinding (array (
+			'database' => $this->settings['database'],
+			'table' => $this->settings['settingsTable'],
+			'intelligence' => true,
+			'data' => $this->settings,
+		));
+		
+		# Process the form
+		if ($result = $form->process ($html)) {
+			
+			# Update the data
+			$this->databaseConnection->update ($this->settings['database'], $this->settings['settingsTable'], $result, array ('id' => 1));
+			
+			# Confirm success
+			$html = "\n<p><img src=\"/images/icons/tick.png\" class=\"icon\" alt=\"\" /> The settings have been updated.</p>" . $html;
+		}
 		
 		# Show the HTML
 		echo $html;
