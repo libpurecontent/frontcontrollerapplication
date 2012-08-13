@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.5.6
+# Version 1.5.7
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -195,6 +195,9 @@ class frontControllerApplication
 				echo $this->databaseConnection->reportError ($this->settings['administratorEmail'], $this->settings['applicationName']);
 				return false;
 			}
+			
+			# Enable strict WHERE mode if required
+			$this->databaseConnection->setStrictWhere ($this->settings['databaseStrictWhere']);
 			
 			# Assign a shortcut for the database table in use
 			$this->dataSource = $this->settings['database'] . '.' . $this->settings['table'];
@@ -485,6 +488,7 @@ class frontControllerApplication
 			'password'										=> NULL,
 			#!# Consider a 'passwordFile' option that just contains the password, with other credentials specified normally and the username assumed to be the class name
 			'database'										=> NULL,
+			'databaseStrictWhere'							=> false,	// Whether automatically-constructed WHERE=... clauses do proper, exact comparisons, so that id="1 x" doesn't match against id value 1 in the database
 			'vendor'										=> 'mysql',	// Database vendor
 			'peopleDatabase'								=> 'people',
 			'table'											=> NULL,
@@ -1131,10 +1135,22 @@ class frontControllerApplication
 	
 	
 	# Settings form
-	private function settings ($dataBindingAttributes = array ())
+	public function settings ($dataBindingSettingsOverrides = array ())
 	{
 		# Start the HTML
 		$html = '';
+		
+		# Define default dataBinding settings
+		$dataBindingSettings = array (
+			'database' => $this->settings['database'],
+			'table' => $this->settings['settingsTable'],
+			'intelligence' => true,
+			'data' => $this->settings,
+			'attributes' => array (),
+		);
+		
+		# Merge in any overriding settings
+		$dataBindingSettings = array_merge ($dataBindingSettings, $dataBindingSettingsOverrides);
 		
 		# Databind a form
 		$form = new form (array (
@@ -1142,13 +1158,7 @@ class frontControllerApplication
 			'reappear' => true,
 			'formCompleteText' => false,
 		));
-		$form->dataBinding (array (
-			'database' => $this->settings['database'],
-			'table' => $this->settings['settingsTable'],
-			'intelligence' => true,
-			'data' => $this->settings,
-			'attributes' => $dataBindingAttributes,
-		));
+		$form->dataBinding ($dataBindingSettings);
 		
 		# Process the form
 		if ($result = $form->process ($html)) {
