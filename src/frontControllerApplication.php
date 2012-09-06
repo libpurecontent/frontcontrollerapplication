@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.5.7
+# Version 1.5.8
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -166,6 +166,11 @@ class frontControllerApplication
 		# Load the form if required
 		if ($this->settings['form']) {
 			require_once ($this->settings['form'] === 'dev' ? 'ultimateForm-dev.php' : 'ultimateForm.php');
+		}
+		
+		# Load jQuery if required
+		if ($this->settings['jQuery']) {
+			echo "\n\n\n<!-- jQuery -->\n" . '<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>' . "\n\n";
 		}
 		
 		# Define the data URL, e.g. for use with ultimateForm::<widget>::autocomplete
@@ -490,6 +495,7 @@ class frontControllerApplication
 			'database'										=> NULL,
 			'databaseStrictWhere'							=> false,	// Whether automatically-constructed WHERE=... clauses do proper, exact comparisons, so that id="1 x" doesn't match against id value 1 in the database
 			'vendor'										=> 'mysql',	// Database vendor
+			'jQuery'										=> false,	// Whether to load jQuery
 			'peopleDatabase'								=> 'people',
 			'table'											=> NULL,
 			'administrators'								=> false,	// Administrators table e.g. 'administrators' or 'facility.administrators'
