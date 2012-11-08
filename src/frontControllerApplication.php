@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.5.8
+# Version 1.5.9
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -532,6 +532,7 @@ class frontControllerApplication
 			'umaskPermissions'								=> 0022,	// Permissions for umask calls; the default here is standard Unix
 			'mkdirPermissions'								=> 0755,	// Permissions for mkdir calls; the default here is standard Unix
 			'chmodPermissions'								=> 0644,	// Permissions for chmod calls; the default here is standard Unix
+			'editingPagination'								=> 250,		// Pagination when editing the embedded record editor
 		);
 		
 		# Merge application defaults with the standard application defaults, with preference: constructor settings, application defaults, frontController application defaults
@@ -1550,8 +1551,7 @@ class frontControllerApplication
 			'displayErrorDebugging' => false,
 			'lookupFunctionParameters' => array (true), // Ensures that the abstract ID is shown
 			'validation' => (isSet ($validation) ? $validation : false),
-			'pagination' => 250,
-			'rewrite' => true,
+			'pagination' => $this->settings['editingPagination'],
 			'showMetadata' => false,
 			'hideTableIntroduction' => true,
 			'fieldFiltering' => "{$this->settings['database']}.administrators.username__JOIN__people__people__reserved.{$this->user}.state",
@@ -1578,6 +1578,50 @@ class frontControllerApplication
 		
 		# Show the HTML
 		echo $html;
+	}
+	
+	
+	# Editing of a single table, substantially delegated to the sinenomine editing component
+	# Needs adding to httpd.conf, where $applicationBaseUrl is not slash-terminated
+	#	Use MacroSinenomineEmbeddedTable "$applicationBaseUrl" "$editingUrl" "$applicationAction"
+	public function editingTable ($table, $dataBindingAttributes = array (), $formDiv = 'graybox lines')
+	{
+		# Start the HTML
+		$html  = '';
+		
+		# Define the sinenomine settings, with any additional settings taking priority
+		$settings = array (
+			'database' => $this->settings['database'],
+			'table' => $table,
+			'administratorEmail' => $this->settings['administratorEmail'],
+			'userIsAdministrator' => $this->userIsAdministrator,
+			'application' => __CLASS__,
+			'baseUrl' => $this->baseUrl,
+			'pagination' => $this->settings['editingPagination'],
+			'showMetadata' => false,
+			'hideTableIntroduction' => true,
+			'fieldFiltering' => "{$this->settings['database']}.administrators.username__JOIN__people__people__reserved.{$this->user}.editingState" . ucfirst ($table),
+			'formDiv' => $formDiv,
+		);
+		
+		# Load and run the database editing
+		require_once ('sinenomine.php');
+		$sinenomine = new sinenomine ($settings, $this->databaseConnection);
+		
+		# Set constraints
+		if ($dataBindingAttributes) {
+			foreach ($dataBindingAttributes as $field => $attributeArray) {
+				$sinenomine->attributes ($this->settings['database'], $table, $field, $attributeArray);
+			}
+		}
+		
+		# Process
+		$sinenomine->process ();
+		$html .= $sinenomine->getContentCss (true);
+		$html .= $sinenomine->getHtml ();
+		
+		# Return the HTML
+		return $html;
 	}
 	
 	
