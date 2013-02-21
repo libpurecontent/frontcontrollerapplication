@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.5.9
+# Version 1.5.10
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -885,11 +885,12 @@ class frontControllerApplication
 		# End if the application does not use a database of additional settings
 		if (!$this->settings['settingsTable']) {return false;}
 		
-		# Get the tables
+		# Ensure the settings table exists
 		$tables = $this->databaseConnection->getTables ($this->settings['database'], $this->settings['settingsTable']);
-		
-		# End if not in the list
 		if (!in_array ($this->settings['settingsTable'], $tables)) {return false;}
+		
+		# Enable the settings subtab
+		$this->enableSettingsSubtab = true;
 		
 		# Get the settings
 		if (!$settingsFromTable = $this->databaseConnection->selectOne ($this->settings['database'], $this->settings['settingsTable'], array ('id' => 1))) {return false;}
@@ -899,9 +900,6 @@ class frontControllerApplication
 			if ($key == 'id') {continue;}
 			$this->settings[$key] = $value;
 		}
-		
-		# Enable the settings subtab
-		$this->enableSettingsSubtab = true;
 	}
 	
 	
@@ -1157,7 +1155,9 @@ class frontControllerApplication
 		);
 		
 		# Merge in any overriding settings
-		$dataBindingSettings = array_merge ($dataBindingSettings, $dataBindingSettingsOverrides);
+		if ($dataBindingSettingsOverrides) {
+			$dataBindingSettings = array_merge ($dataBindingSettings, $dataBindingSettingsOverrides);
+		}
 		
 		# Databind a form
 		$form = new form (array (
@@ -1170,8 +1170,11 @@ class frontControllerApplication
 		# Process the form
 		if ($result = $form->process ($html)) {
 			
-			# Update the data
-			$this->databaseConnection->update ($this->settings['database'], $this->settings['settingsTable'], $result, array ('id' => 1));
+			# Add in fixed data
+			$result['id'] = 1;
+			
+			# Insert/update the data
+			$this->databaseConnection->insert ($this->settings['database'], $this->settings['settingsTable'], $result, $onDuplicateKeyUpdate = true);
 			
 			# Confirm success
 			$html = "\n<p><img src=\"/images/icons/tick.png\" class=\"icon\" alt=\"\" /> The settings have been updated.</p>" . $html;
