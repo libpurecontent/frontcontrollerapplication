@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.5.10
+# Version 1.5.11
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -446,6 +446,12 @@ class frontControllerApplication
 		
 		# Determine the action to use - the 'method' keyword is used to work around name clashes with reserved PHP keywords, e.g. clone.html -> clone -> clonearticle (as 'clone' is a PHP keyword so cannot be used as a method name)
 		$this->doAction = (isSet ($this->actions[$this->action]['method']) ? $this->actions[$this->action]['method'] : $this->action);
+		
+		# Send no-cache headers if required
+		if (isSet ($this->actions[$this->action]['nocache']) && $this->actions[$this->action]['nocache']) {
+			header ('Cache-Control: no-cache, must-revalidate');	// HTTP/1.1
+			header ('Expires: Sat, 26 Jul 1997 05:00:00 GMT');		// Date in the past
+		}
 		
 		# Perform the action
 		if (!$disableAutoGui) {
