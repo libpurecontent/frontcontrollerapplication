@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.5.11
+# Version 1.6.0
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -23,6 +23,12 @@ class frontControllerApplication
 		),
 		'page404' => array (
 			'description' => 'Error 404: page not found',
+		),
+		'profile' => array (
+			'description' => 'Update your profile',
+			'url' => 'profile/',
+			'tab' => '<img src="/images/icons/user.png" alt="" class="icon" /> My profile',
+			'authentication' => true,
 		),
 		'feedback' => array (
 			'description' => 'Feedback/contact form',
@@ -253,6 +259,9 @@ class frontControllerApplication
 		# Get the settings from the settings table, if required
 		$this->addSettingsTableConfig ();
 		
+		# Get the profile from the profiles table, if required
+		$this->profile = $this->getProfile ();
+		
 		# Determine the administrator privilege level if the database table supports this
 		$this->restrictedAdministrator = NULL;
 		if ($this->userIsAdministrator) {
@@ -310,7 +319,7 @@ class frontControllerApplication
 		}
 		
 		# Move feedback and admin to the end
-		$functions = array ('editing', 'feedback', 'help', 'admin');
+		$functions = array ('editing', 'profile', 'feedback', 'help', 'admin');
 		foreach ($functions as $function) {
 			if (isSet ($this->actions[$function])) {
 				$temp{$function} = $this->actions[$function];
@@ -320,6 +329,7 @@ class frontControllerApplication
 		}
 		
 		# Default to home if no valid action selected
+		#!# Should show 404 - this will happen if a query string is set up but the action itself isn't registered
 		if (!$this->action || !array_key_exists ($this->action, $this->actions)) {
 			$this->action = 'home';
 		}
@@ -506,6 +516,7 @@ class frontControllerApplication
 			'table'											=> NULL,
 			'administrators'								=> false,	// Administrators table e.g. 'administrators' or 'facility.administrators'
 			'settingsTable'									=> 'settings',	// Settings table (must be in the main database) e.g. 'settings' or false to disable (only needed a table of that name is present for a different purpose)
+			'profiles'										=> false,	// Use of the profiles system (true/false or table, e.g. 'profiles'; true will use 'profiles'
 			'logfile'										=> './logfile.txt',
 			'webmaster'										=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
 			'administratorEmail'							=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
@@ -599,6 +610,7 @@ class frontControllerApplication
 		if (!$this->settings['useAdmin']) {unset ($actions['admin']);}
 		if (!$this->settings['useFeedback']) {unset ($actions['feedback']);}
 		if (!$this->settings['useEditing']) {unset ($actions['editing']);}
+		if (!$this->enableProfileTab) {unset ($actions['profile']);}
 		if (!$this->enableSettingsSubtab) {unset ($actions['settings']);}
 		
 		# Remove tabs if necessary
@@ -840,6 +852,35 @@ class frontControllerApplication
 	}
 	
 	
+	# Function to create a portal table showing the sub-applications
+	public function applicationTable ()
+	{
+		# Determine the applications
+		$applications = array ();
+		foreach ($this->actions as $action => $attributes) {
+			if (isSet ($attributes['applicationImage'])) {
+				$applications[] = $action;
+			}
+		}
+		
+		# Create as a table
+		$table = array ();
+		foreach ($applications as $application) {
+			$link = $this->baseUrl . '/' . $this->actions[$application]['url'];
+			$table[$application] = array (
+				'image' => "<a href=\"{$link}\"><img src=\"{$this->baseUrl}{$this->actions[$application]['applicationImage']}\" /></a>",
+				'text' => "<h2><a href=\"{$link}\">" . $this->actions[$application]['description'] . '</a></h2>' . "\n" . $this->actions[$application]['aboutHtml'],
+			);
+		}
+		
+		# Compile the HTML
+		$html = application::htmlTable ($table, array (), 'portal largeimages imageborders', $keyAsFirstColumn = false, false, $allowHtml = true, false, $addCellClasses = false, $addRowKeyClasses = false, array (), false, $showHeadings = false);
+		
+		# Return the HTML
+		return $html;
+	}
+	
+	
 	# Function to get an array of administrators
 	function getAdministrators ()
 	{
@@ -892,7 +933,7 @@ class frontControllerApplication
 		if (!$this->settings['settingsTable']) {return false;}
 		
 		# Ensure the settings table exists
-		$tables = $this->databaseConnection->getTables ($this->settings['database'], $this->settings['settingsTable']);
+		$tables = $this->databaseConnection->getTables ($this->settings['database']);
 		if (!in_array ($this->settings['settingsTable'], $tables)) {return false;}
 		
 		# Enable the settings subtab
@@ -906,6 +947,36 @@ class frontControllerApplication
 			if ($key == 'id') {continue;}
 			$this->settings[$key] = $value;
 		}
+	}
+	
+	
+	# Function to get the user profile, if that system is in use
+	private function getProfile ()
+	{
+		# Assume there is no such table
+		$this->enableProfileTab = false;
+		
+		# End if the application does not have database support
+		if (!$this->settings['useDatabase']) {return false;}
+		
+		# End if the application does not use a table of profiles
+		if (!$this->settings['profiles']) {return false;}
+		
+		# If set to boolean true, use the default of 'profiles'
+		if ($this->settings['profiles'] === true) {$this->settings['profiles'] = 'profiles';}
+		
+		# Ensure the profiles table exists
+		$tables = $this->databaseConnection->getTables ($this->settings['database']);
+		if (!in_array ($this->settings['profiles'], $tables)) {return false;}
+		
+		# Enable the profiles subtab
+		$this->enableProfileTab = true;
+		
+		# Get the profile
+		if (!$profile = $this->databaseConnection->selectOne ($this->settings['database'], $this->settings['profiles'], array ('id' => $this->user))) {return false;}
+		
+		# Return the confirmed profile
+		return $profile;
 	}
 	
 	
@@ -1170,6 +1241,9 @@ class frontControllerApplication
 			'databaseConnection'	=> $this->databaseConnection,
 			'reappear' => true,
 			'formCompleteText' => false,
+			'displayRestrictions' => false,
+			'unsavedDataProtection' => true,
+			'jQuery' => !$this->settings['jQuery'],	// Do not load if already loaded
 		));
 		$form->dataBinding ($dataBindingSettings);
 		
@@ -1181,6 +1255,95 @@ class frontControllerApplication
 			
 			# Insert/update the data
 			$this->databaseConnection->insert ($this->settings['database'], $this->settings['settingsTable'], $result, $onDuplicateKeyUpdate = true);
+			
+			# Confirm success
+			$html = "\n<p><img src=\"/images/icons/tick.png\" class=\"icon\" alt=\"\" /> The settings have been updated.</p>" . $html;
+		}
+		
+		# Show the HTML
+		echo $html;
+	}
+	
+	
+	# Function to create a button to update the user's profile
+	public function profileUpdateButton ($div = 'graybox')
+	{
+		# If no user, do not show the button
+		if (!$this->user) {return false;}
+		
+		# If the user has a profile already, not needed
+		if ($this->profile) {return false;}
+		
+		# Assemble the HTML
+		$html = "\n<p>Please <a href=\"{$this->baseUrl}/profile/\">" . '<img src="/images/icons/user.png" alt="" class="icon" /> create your profile</a> so that we can personalise this system for you.</p>';
+		
+		# Surround with a div if required
+		if ($div) {
+			$html = "\n<br /><br /><div class=\"{$div}\">{$html}</div><br /><br />";
+		}
+		
+		# Return the HTML
+		return $html;
+	}
+	
+	
+	# Profile page
+	public function profile ($dataBindingSettingsOverrides = array ())
+	{
+		# Start the HTML
+		$html = '';
+		
+		# Introductory text
+		$html .= "\n<p>Here you can " . ($this->profile ? 'update' : 'create') . ' your profile.</p>';
+		
+		# Define default dataBinding settings
+		$dataBindingSettings = array (
+			'database' => $this->settings['database'],
+			'table' => $this->settings['profiles'],
+			'intelligence' => true,
+			'data' => $this->profile,
+			'simpleJoin' => true,
+			#!# Currently assumes the join table has a name field of name as its visible values
+			'lookupFunctionParameters' => array ($showKeys = false, 'name', false, false, $firstOnly = true),
+			'attributes' => array (
+				'id' => array ('default' => $this->user, 'editable' => false, ),
+			),
+		);
+		
+		# Merge in any overriding settings
+		if ($dataBindingSettingsOverrides) {
+			$dataBindingSettings = array_merge ($dataBindingSettings, $dataBindingSettingsOverrides);
+		}
+		
+		# Databind a form
+		$form = new form (array (
+			'databaseConnection'	=> $this->databaseConnection,
+			'reappear' => true,
+			'formCompleteText' => false,
+			'nullText' => false,
+			'display' => 'paragraphs',
+			'div' => 'graybox',
+			'displayRestrictions' => false,
+		));
+		$form->dataBinding ($dataBindingSettings);
+		
+		# Add additional validation if required
+		if (method_exists ($this, 'profileUnfinalisedData')) {
+			if ($unfinalisedData = $form->getUnfinalisedData ()) {
+				$this->profileUnfinalisedData ($unfinalisedData, $form);	// $form received by reference
+			}
+		}
+		
+		# Process the form
+		if ($result = $form->process ($html)) {
+			
+			# Set fixed data
+			$result['id'] = $this->user;
+			
+			# Insert/update the data
+			$action = ($this->profile ? 'update' : 'insert');
+			$argument4 = ($this->profile ? array ('id' => $this->user) : false);
+			$this->databaseConnection->{$action} ($this->settings['database'], $this->settings['profiles'], $result);
 			
 			# Confirm success
 			$html = "\n<p><img src=\"/images/icons/tick.png\" class=\"icon\" alt=\"\" /> The settings have been updated.</p>" . $html;
