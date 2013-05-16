@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.0
+# Version 1.6.1
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -587,7 +587,7 @@ class frontControllerApplication
 	
 	
 	# Skeleton function to get local actions
-	function defaults ($suppliedUncleanedSettings = false /* Occasionally useful to be able to read the supplied settings when overriding the defaults */)
+	function defaults ()
 	{
 		return $this->defaults;
 	}
