@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.1
+# Version 1.6.2
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -154,6 +154,11 @@ class frontControllerApplication
 		# Function to merge the arguments; note that $errors returns the errors by reference and not as a result from the method
 		#!# Ideally the start and end div would surround these items before $this->action is determined, but that would break external type handling
 		if (!$this->settings = application::assignArguments ($errors, $settings, $this->defaults, get_class ($this), NULL, $handleErrors = true)) {return false;}
+		
+		# Deal with table prefixes
+		if ($this->settings['tablePrefix']) {
+			if ($this->settings['table']) {$this->settings['table'] = $this->settings['tablePrefix'] . $this->settings['table'];}
+		}
 		
 		# If a password setting is supplied, and it appears to be a full path, assume it is a file to be read, not the password string itself
 		if ($this->settings['password']) {
@@ -517,6 +522,7 @@ class frontControllerApplication
 			'administrators'								=> false,	// Administrators table e.g. 'administrators' or 'facility.administrators'
 			'settingsTable'									=> 'settings',	// Settings table (must be in the main database) e.g. 'settings' or false to disable (only needed a table of that name is present for a different purpose)
 			'profiles'										=> false,	// Use of the profiles system (true/false or table, e.g. 'profiles'; true will use 'profiles'
+			'tablePrefix'									=> false,	// Prefix which will be added to any table/administrators/settingsTable/profiles settings
 			'logfile'										=> './logfile.txt',
 			'webmaster'										=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
 			'administratorEmail'							=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
@@ -884,15 +890,20 @@ class frontControllerApplication
 	# Function to get an array of administrators
 	function getAdministrators ()
 	{
-		# Return an empty array if the application does not use a database of administrators
+		# Return an empty array if the application does not use a table of administrators
 		if (!$this->settings['administrators']) {return array ();}
 		
 		# If the setting is an array the return that
 		if (is_array ($this->settings['administrators'])) {return $this->settings['administrators'];}
 		
-		# True means assign the default 'administrators'
+		# True means assign the default table name 'administrators'
 		if ($this->settings['administrators'] === true) {
 			$this->settings['administrators'] = 'administrators';
+		}
+		
+		# Add table name prefix if required
+		if ($this->settings['tablePrefix']) {
+			$this->settings['administrators'] = $this->settings['tablePrefix'] . $this->settings['administrators'];
 		}
 		
 		# Convert table to database.table
@@ -932,6 +943,11 @@ class frontControllerApplication
 		# End if the application does not use a database of additional settings
 		if (!$this->settings['settingsTable']) {return false;}
 		
+		# Add table name prefix if required
+		if ($this->settings['tablePrefix']) {
+			$this->settings['settingsTable'] = $this->settings['tablePrefix'] . $this->settings['settingsTable'];
+		}
+		
 		# Ensure the settings table exists
 		$tables = $this->databaseConnection->getTables ($this->settings['database']);
 		if (!in_array ($this->settings['settingsTable'], $tables)) {return false;}
@@ -964,6 +980,11 @@ class frontControllerApplication
 		
 		# If set to boolean true, use the default of 'profiles'
 		if ($this->settings['profiles'] === true) {$this->settings['profiles'] = 'profiles';}
+		
+		# Add table name prefix if required
+		if ($this->settings['tablePrefix']) {
+			$this->settings['profiles'] = $this->settings['tablePrefix'] . $this->settings['profiles'];
+		}
 		
 		# Ensure the profiles table exists
 		$tables = $this->databaseConnection->getTables ($this->settings['database']);
@@ -1756,7 +1777,7 @@ class frontControllerApplication
 	# Editing of a single table, substantially delegated to the sinenomine editing component
 	# Needs adding to httpd.conf, where $applicationBaseUrl is not slash-terminated
 	#	Use MacroSinenomineEmbeddedTable "$applicationBaseUrl" "$editingUrl" "$applicationAction"
-	public function editingTable ($table, $dataBindingAttributes = array (), $formDiv = 'graybox lines')
+	public function editingTable ($table, $dataBindingAttributes = array (), $formDiv = 'graybox lines', $tableUrlMoniker = false, $sinenomineExtraSettings = array ())
 	{
 		# Start the HTML
 		$html  = '';
@@ -1765,6 +1786,7 @@ class frontControllerApplication
 		$settings = array (
 			'database' => $this->settings['database'],
 			'table' => $table,
+			'tableUrlMoniker' => $tableUrlMoniker,
 			'administratorEmail' => $this->settings['administratorEmail'],
 			'userIsAdministrator' => $this->userIsAdministrator,
 			'application' => __CLASS__,
@@ -1775,6 +1797,9 @@ class frontControllerApplication
 			'fieldFiltering' => "{$this->settings['database']}.administrators.username__JOIN__people__people__reserved.{$this->user}.editingState" . ucfirst ($table),
 			'formDiv' => $formDiv,
 		);
+		
+		# Add additional settings if specified, overwriting any specified above
+		$settings = array_merge ($settings, $sinenomineExtraSettings);
 		
 		# Load and run the database editing
 		require_once ('sinenomine.php');
