@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.2
+# Version 1.6.3
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -339,8 +339,20 @@ class frontControllerApplication
 			$this->action = 'home';
 		}
 		
+		# Determine if a header logo (assumed to be relative to baseUrl) is to be used, and if so assemble the HTML
+		$headerLogo = false;
+		if ($this->settings['headerLogo']) {
+			$location = $this->baseUrl . $this->settings['headerLogo'];
+			$headerLogoFile = $_SERVER['DOCUMENT_ROOT'] . $location;
+			if (is_readable ($headerLogoFile)) {
+				list ($width, $height, $type, $attributes) = getimagesize ($headerLogoFile);
+				$headerLogo = '<img alt="' . ucfirst (htmlspecialchars ($this->settings['applicationName'])) . '" title="' . ucfirst (htmlspecialchars ($this->settings['applicationName'])) . '" src="' . $location . '" ' . $attributes . ' />';
+				$headerLogo = "<a href=\"{$this->baseUrl}/\">" . $headerLogo . '</a>';	// Clickable
+			}
+		}
+		
 		# Show the header
-		$headerHtml  = "\n" . ($this->settings['h1'] === '' ? '' : ($this->settings['h1'] ? $this->settings['h1'] : '<h1>' . ucfirst ($this->settings['applicationName']) . '</h1>'));
+		$headerHtml  = "\n" . ($this->settings['h1'] === '' ? '' : ($this->settings['h1'] ? $this->settings['h1'] : '<h1>' . ($headerLogo ? $headerLogo : ucfirst (htmlspecialchars ($this->settings['applicationName']))) . '</h1>'));
 		
 		# Show the tabs, any subtabs, and the action name
 		$headerHtml .= $this->showTabs ($this->action, $this->settings['tabUlClass']);
@@ -507,6 +519,7 @@ class frontControllerApplication
 			'internalAuthPasswordRequiresLettersAndNumbers'	=> true,	// Whether the internal auth password requires both letters and numbers
 			'minimumPasswordLength'							=> 4,			// Minimum password length when using externalAuth
 			'h1'											=> false,		// NB an empty string will remove <h1>..</h1> altogether
+			'headerLogo'									=> false,		// Image for a header instead of the application name
 			'useDatabase'									=> true,
 			'credentials'									=> false,	// Filename of credentials file, which results in hostname/username/password/database being ignored
 			'hostname'										=> 'localhost',
@@ -1267,6 +1280,11 @@ class frontControllerApplication
 			'jQuery' => !$this->settings['jQuery'],	// Do not load if already loaded
 		));
 		$form->dataBinding ($dataBindingSettings);
+		
+		# Add getUnfinalised post-processing if such a function is defined in the calling class
+		if (method_exists ($this, 'settingsGetUnfinalised')) {
+			$this->settingsGetUnfinalised ($form);	// Needs to be received by reference
+		}
 		
 		# Process the form
 		if ($result = $form->process ($html)) {
