@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.3
+# Version 1.6.4
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -534,6 +534,7 @@ class frontControllerApplication
 			'table'											=> NULL,
 			'administrators'								=> false,	// Administrators table e.g. 'administrators' or 'facility.administrators'
 			'settingsTable'									=> 'settings',	// Settings table (must be in the main database) e.g. 'settings' or false to disable (only needed a table of that name is present for a different purpose)
+			'settingsTableExplodeTextarea'					=> false,	// Whether to split textarea columns in a settings table into an array of values - true/false, or an array of fieldnames which should have this applied to
 			'profiles'										=> false,	// Use of the profiles system (true/false or table, e.g. 'profiles'; true will use 'profiles'
 			'tablePrefix'									=> false,	// Prefix which will be added to any table/administrators/settingsTable/profiles settings
 			'logfile'										=> './logfile.txt',
@@ -971,6 +972,19 @@ class frontControllerApplication
 		# Get the settings
 		if (!$settingsFromTable = $this->databaseConnection->selectOne ($this->settings['database'], $this->settings['settingsTable'], array ('id' => 1))) {return false;}
 		
+		# If the setting is a textarea (but not HTML), explode the options into a list
+		if ($this->settings['settingsTableExplodeTextarea']) {
+			$fieldStructure = $this->databaseConnection->getFields ($this->settings['database'], $this->settings['settingsTable']);
+			foreach ($fieldStructure as $fieldname => $field) {
+				if (is_array ($this->settings['settingsTableExplodeTextarea']) && !in_array ($fieldname, $this->settings['settingsTableExplodeTextarea'])) {continue;}	// Skip if a list is supplied and the field is not in it
+				if ($field['Type'] == 'text') {
+					if (!preg_match ('/(html|richtext)/i', $fieldname)) {	// Exclude fields that look like richtext (HTML); this should match the defintion in the dataBinding function in ultimateForm.php, so that the developer can be sure that if a richtext field appears in the settings page, that it won't get exploded
+						$settingsFromTable[$fieldname] = preg_split ("/\s*\r?\n\t*\s*/", trim ($settingsFromTable[$fieldname]));
+					}
+				}
+			}
+		}
+		
 		# Merge in the settings, ignoring the id, and overwriting anything currently present
 		foreach ($settingsFromTable as $key => $value) {
 			if ($key == 'id') {continue;}
@@ -1256,12 +1270,22 @@ class frontControllerApplication
 		# Start the HTML
 		$html = '';
 		
+		# Ensure settings are all strings - some may have been exploded
+		$settings = $this->settings;
+		if ($this->settings['settingsTableExplodeTextarea']) {
+			foreach ($settings as $key => $value) {
+				if (is_array ($value)) {
+					$settings[$key] = implode ("\n", $value);
+				}
+			}
+		}
+		
 		# Define default dataBinding settings
 		$dataBindingSettings = array (
 			'database' => $this->settings['database'],
 			'table' => $this->settings['settingsTable'],
 			'intelligence' => true,
-			'data' => $this->settings,
+			'data' => $settings,
 			'attributes' => array (),
 		);
 		
