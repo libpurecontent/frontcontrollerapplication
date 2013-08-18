@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.5
+# Version 1.6.6
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -358,6 +358,11 @@ class frontControllerApplication
 		
 		# Show the tabs, any subtabs, and the action name
 		$headerHtml .= $this->showTabs ($this->action, $this->settings['tabUlClass']);
+		if (method_exists ($this, 'guiSearchBox')) {
+			$headerHtml .= "\n<div id=\"cornersearch\">";
+			$headerHtml .= $this->guiSearchBox ();
+			$headerHtml .= "\n</div>";
+		}
 		$headerHtml .= $this->showSubTabs ($this->action);
 		if (array_key_exists ('description', $this->actions[$this->action]) && $this->actions[$this->action]['description'] && !substr_count ($this->actions[$this->action]['description'], '%') && (!isSet ($this->actions[$this->action]['heading']) || $this->actions[$this->action]['heading'])) {$headerHtml .= "\n<h2>{$this->actions[$this->action]['description']}</h2>";}
 		
