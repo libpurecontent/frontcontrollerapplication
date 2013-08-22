@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.6
+# Version 1.6.7
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -127,6 +127,9 @@ class frontControllerApplication
 	
 	# Internal auth
 	var $internalAuthClass = NULL;
+	
+	# Tab forcing
+	var $tabForced = false;
 	
 	
 	# Constructor
@@ -357,7 +360,8 @@ class frontControllerApplication
 		$headerHtml  = "\n" . ($this->settings['h1'] === '' ? '' : ($this->settings['h1'] ? $this->settings['h1'] : '<h1>' . ($headerLogo ? $headerLogo : ucfirst (htmlspecialchars ($this->settings['applicationName']))) . '</h1>'));
 		
 		# Show the tabs, any subtabs, and the action name
-		$headerHtml .= $this->showTabs ($this->action, $this->settings['tabUlClass']);
+		$selectedTab = ($this->tabForced ? $this->tabForced : $this->action);
+		$headerHtml .= $this->showTabs ($selectedTab, $this->settings['tabUlClass']);
 		if (method_exists ($this, 'guiSearchBox')) {
 			$headerHtml .= "\n<div id=\"cornersearch\">";
 			$headerHtml .= $this->guiSearchBox ();
@@ -739,7 +743,7 @@ class frontControllerApplication
 		}
 		
 		# Compile the HTML
-		$html = "\n" . "<ul class=\"{$class}\">" . "\n" . implode ("\n\t", $tabs) . "\n</ul>";
+		$html = "\n\n" . "<ul class=\"{$class}\">" . "\n\t" . implode ("\n\t", $tabs) . "\n</ul>\n";
 		
 		# Add on a surrounding div if required
 		if ($this->settings['tabDivId']) {
