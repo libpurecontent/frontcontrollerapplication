@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.7
+# Version 1.6.8
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -1560,32 +1560,42 @@ class frontControllerApplication
 	}
 	
 	
-	# Function to show administrators
-	function administrators ($null = NULL, $boxClass = 'graybox', $showFields = array ('active' => 'Active?', 'email' => 'E-mail', 'privilege' => 'privilege', 'name' => 'name', 'forename' => 'forename', 'surname' => 'surname', ))
+	# Function to determine the administrator username field
+	private function administratorUsernameField ()
 	{
 		# Determine the name of the username field
 		#!# Use of $this->settings['administrators'] as table name here needs auditing
 		$fields = $this->databaseConnection->getFieldnames ($this->settings['database'], $this->settings['administrators']);
 		$possibleUsernameFields = array ('username', 'crsid', "username__JOIN__{$this->settings['peopleDatabase']}__people__reserved");
-		$usernameField = $possibleUsernameFields[0];
 		foreach ($possibleUsernameFields as $field) {
 			if (in_array ($field, $fields)) {
-				$usernameField = $field;
-				break;
+				return $field;
 			}
 		}
 		
+		# Return the default if not found
+		#!# This is not useful, since it should already have been found
+		return $possibleUsernameFields[0];
+	}
+	
+	
+	# Function to show administrators
+	function administrators ($null = NULL, $boxClass = 'graybox', $showFields = array ('active' => 'Active?', 'email' => 'E-mail', 'privilege' => 'privilege', 'name' => 'name', 'forename' => 'forename', 'surname' => 'surname', ))
+	{
 		# Start the HTML
 		$html  = '';
 		
+		# Get the username field
+		$administratorUsernameField = $this->administratorUsernameField ();
+		
 		# Add an administrator form
-		$html .= $this->administratorsAdd ($boxClass, $usernameField);
+		$html .= $this->administratorsAdd ($boxClass, $administratorUsernameField);
 		
 		# Delete an administrator form
-		$html .= $this->administratorsDelete ($boxClass, $usernameField);
+		$html .= $this->administratorsDelete ($boxClass, $administratorUsernameField);
 		
 		# Show current administrators
-		$html .= $this->administratorsShow ($boxClass, $usernameField, $showFields);
+		$html .= $this->administratorsShow ($boxClass, $administratorUsernameField, $showFields);
 		
 		# Show the HTML
 		echo $html;
@@ -1851,6 +1861,9 @@ class frontControllerApplication
 		# Start the HTML
 		$html  = '';
 		
+		# Get the username field
+		$administratorUsernameField = $this->administratorUsernameField ();
+		
 		# Define the settings
 		$settings = array (
 			'database' => $this->settings['database'],
@@ -1867,7 +1880,8 @@ class frontControllerApplication
 			'pagination' => $this->settings['editingPagination'],
 			'showMetadata' => false,
 			'hideTableIntroduction' => true,
-			'fieldFiltering' => "{$this->settings['database']}.administrators.username__JOIN__people__people__reserved.{$this->user}.state",
+			#!# Inconsistent
+			'fieldFiltering' => "{$this->settings['database']}.{$this->settings['administrators']}.{$administratorUsernameField}.{$this->user}.state",
 			'deny' => $deny,
 			'denyAdministratorOverride' => false,
 			'tableCommentsInSelectionList' => true,
@@ -1902,6 +1916,9 @@ class frontControllerApplication
 		# Start the HTML
 		$html  = '';
 		
+		# Get the username field
+		$administratorUsernameField = $this->administratorUsernameField ();
+		
 		# Define the sinenomine settings, with any additional settings taking priority
 		$settings = array (
 			'database' => $this->settings['database'],
@@ -1914,7 +1931,7 @@ class frontControllerApplication
 			'pagination' => $this->settings['editingPagination'],
 			'showMetadata' => false,
 			'hideTableIntroduction' => true,
-			'fieldFiltering' => "{$this->settings['database']}.administrators.username__JOIN__people__people__reserved.{$this->user}.editingState" . ucfirst ($table),
+			'fieldFiltering' => "{$this->settings['database']}.{$this->settings['administrators']}.{$administratorUsernameField}.{$this->user}.editingState" . ucfirst ($table),
 			'formDiv' => $formDiv,
 		);
 		
