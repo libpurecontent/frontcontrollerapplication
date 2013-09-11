@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.8
+# Version 1.6.9
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -711,6 +711,14 @@ class frontControllerApplication
 			if (isSet ($attributes['privilege']) && ($attributes['privilege'])) {
 				$privilegeProperty = $attributes['privilege'];
 				if (!$this->userIsAdministrator && !$this->$privilegeProperty) {	// Assumes that restrictedAdministrator is not enough
+					continue;
+				}
+			}
+			
+			# Disable (remove this action) if required; this is basically a convenience flag to avoid having to do unset() after an array definition
+			if (isSet ($attributes['enableIf'])) {
+				if (!$attributes['enableIf']) {
+					unset ($this->actions[$action]);
 					continue;
 				}
 			}
