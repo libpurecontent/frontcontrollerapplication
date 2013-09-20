@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.9
+# Version 1.6.10
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -278,7 +278,7 @@ class frontControllerApplication
 			$this->restrictedAdministrator = ((isSet ($this->administrators[$this->user]['privilege']) && ($this->administrators[$this->user]['privilege'] == 'Restricted administrator')) ? true : NULL);
 		}
 		
-		# Additional processing, before actions, if required
+		# Additional processing, before actions processing phase, if required
 		if (method_exists ($this, 'mainPreActions')) {
 			if ($this->mainPreActions () === false) {
 				echo $endDiv;
@@ -671,7 +671,7 @@ class frontControllerApplication
 	}
 	
 	
-	# Skeleton function to get local actions
+	# Skeleton function to define locally-defined actions; normally overridden
 	function actions ()
 	{
 		return $this->actions;
@@ -715,7 +715,7 @@ class frontControllerApplication
 				}
 			}
 			
-			# Disable (remove this action) if required; this is basically a convenience flag to avoid having to do unset() after an array definition
+			# Disable (remove) an action if required; this is basically a convenience flag to avoid having to do unset() after an array definition
 			if (isSet ($attributes['enableIf'])) {
 				if (!$attributes['enableIf']) {
 					unset ($this->actions[$action]);
@@ -1639,7 +1639,7 @@ class frontControllerApplication
 				'table' => $this->settings['administrators'],
 				'includeOnly' => array ($usernameField, 'forename', 'surname', 'name', 'email', 'privilege'),
 				'attributes' => array (
-					$usernameField => array ('current' => array_keys ($this->administrators)),
+					$usernameField => array ('current' => array_keys ($this->administrators), 'autocomplete' => ($this->settings['useCamUniLookup'] ? camUniData::autocompleteNamesUrlSource () : false), ),
 					'email' => array ('type' => 'email', ),
 			)));
 			
