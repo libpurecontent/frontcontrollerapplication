@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.13
+# Version 1.6.14
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -1033,7 +1033,12 @@ class frontControllerApplication
 		if (!$this->settings['administrators']) {return array ();}
 		
 		# If the setting is an array the return that
-		if (is_array ($this->settings['administrators'])) {return $this->settings['administrators'];}
+		if (is_array ($this->settings['administrators'])) {
+			foreach ($this->settings['administrators'] as $administrator) {
+				$administrators[$administrator] = $administrator;	// Administrators have to be in the key
+			}
+			return $administrators;
+		}
 		
 		# True means assign the default table name 'administrators'
 		if ($this->settings['administrators'] === true) {
