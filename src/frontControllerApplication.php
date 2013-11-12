@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.16
+# Version 1.6.17
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -426,7 +426,11 @@ class frontControllerApplication
 		
 		# Require authentication for actions that require this
 		$authRequiredByAction = (isSet ($this->actions[$this->action]['authentication']) && $this->actions[$this->action]['authentication']);
-		if (!$this->user && ($authRequiredByAction || $this->settings['authentication'])) {
+		$authRequiredGlobally = $this->settings['authentication'];
+		if (isSet ($this->actions[$this->action]['authentication']) && !$this->actions[$this->action]['authentication']) {
+			$authRequiredGlobally = false;	// Override global authentication setting if explicitly set to false for the local action
+		}
+		if (!$this->user && ($authRequiredByAction || $authRequiredGlobally)) {
 			$pagesNeverRequiringAuthentication = array ('register', 'resetpassword', );
 			if ($this->settings['dataDisableAuth']) {$pagesNeverRequiringAuthentication[] = 'data';}
 			if (!in_array ($this->action, $pagesNeverRequiringAuthentication)) {
