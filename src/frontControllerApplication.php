@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.17
+# Version 1.6.18
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -405,6 +405,14 @@ class frontControllerApplication
 			return false;
 		}
 		
+		# Determine whether the user can see auth (login/logout) links
+		$authLinkVisibility = $this->settings['authLinkVisibility'];
+		$authLimited = (is_string ($this->settings['authLinkVisibility']));
+		if ($authLimited) {
+			$delimiter = '@';
+			$authLinkVisibility = (preg_match ($delimiter . addcslashes ($this->settings['authLinkVisibility'], $delimiter) . $delimiter, gethostbyaddr ($_SERVER['REMOTE_ADDR'])));
+		}
+		
 		# Show login status
 		#!# Should have urlencode also?
 		$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: http://stackoverflow.com/questions/940905
@@ -417,7 +425,9 @@ class frontControllerApplication
 			$logoutUrl = 'logoutinternal.html';
 			$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/logininternal.html?{$location}\">logged in</a>";
 		}
-		$headerHtml = '<p class="loggedinas noprint">' . ($this->user ? 'You are logged in as: <strong>' . $this->userVisibleIdentifier . ($this->userIsAdministrator ? ' (ADMIN)' : ($this->userStatus ? " ({$this->userStatus})" : '')) . "</strong> [<a href=\"{$this->baseUrl}/" . $logoutUrl . "\" class=\"logout\">log out</a>]" : $loginTextLink) . '</p>' . $headerHtml;
+		if ($authLinkVisibility) {
+			$headerHtml = '<p class="loggedinas noprint"' . ($authLimited ? ' title="[The login system is not visible to all users]"' : '') . '>' . ($this->user ? 'You are logged in as: <strong>' . $this->userVisibleIdentifier . ($this->userIsAdministrator ? ' (ADMIN)' : ($this->userStatus ? " ({$this->userStatus})" : '')) . "</strong> [<a href=\"{$this->baseUrl}/" . $logoutUrl . "\" class=\"logout\">log out</a>]" : $loginTextLink) . '</p>' . $headerHtml;
+		}
 		
 		# Show the header/tabs
 		if (!$this->exportType) {
@@ -569,6 +579,7 @@ class frontControllerApplication
 			'internalAuth'									=> false,		// Allow internal authentication/authorisation
 			'internalAuthSalt'								=> '%_salt',	// Salt used for internalAuth; should be set if using internalAuth
 			'internalAuthPasswordRequiresLettersAndNumbers'	=> true,	// Whether the internal auth password requires both letters and numbers
+			'authLinkVisibility'							=> true,		// Whether the auth link is visible (true/false or regexp for matching REMOTE_ADDR)
 			'minimumPasswordLength'							=> 4,			// Minimum password length when using externalAuth
 			'h1'											=> false,		// NB an empty string will remove <h1>..</h1> altogether
 			'headerLocation'								=> false,		// GUI header, if local loading needed
