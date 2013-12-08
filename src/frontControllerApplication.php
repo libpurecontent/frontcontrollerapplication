@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.18
+# Version 1.6.19
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -127,6 +127,10 @@ class frontControllerApplication
 	
 	# Internal auth
 	var $internalAuthClass = NULL;
+	
+	# Define common text
+	protected $cross = '<img src="/images/icons/cross.png" alt="Cross" class="icon" />';
+	protected $tick = '<img src="/images/icons/tick.png" alt="Tick" class="icon" />';
 	
 	# Tab forcing
 	var $tabForced = false;
@@ -1242,6 +1246,7 @@ class frontControllerApplication
 			if (substr_count ($_SERVER['QUERY_STRING'], "action={$method}&/")) {
 				$location = '/' . str_replace ("action={$method}&/", '', $_SERVER['QUERY_STRING']);
 			}
+			#!# This isn't actually needed by the logininternal implementation, as that handles redirects itself
 			header ('Location: ' . $_SERVER['_SITE_URL'] . $location);
 			return false;
 		}
