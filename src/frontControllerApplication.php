@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.19
+# Version 1.6.20
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -87,22 +87,22 @@ class frontControllerApplication
 		),
 		'logininternal' => array (
 			'description' => 'Login',
-			'url' => 'logininternal.html',
+			'url' => 'login/',
 			'usetab' => 'home',
 		),
 		'logoutinternal' => array (
 			'description' => 'Logout',
-			'url' => 'logoutinternal.html',
+			'url' => 'login/logout/',
 			'usetab' => 'home',
 		),
 		'register' => array (
 			'description' => 'Create a new account',
-			'url' => 'register.html',
+			'url' => 'login/register/',
 			'usetab' => 'home',
 		),
 		'resetpassword' => array (
 			'description' => 'Reset a forgotten password',
-			'url' => 'resetpassword.html',
+			'url' => 'login/resetpassword/',
 			'usetab' => 'home',
 		),
 		'loggedout' => array (
@@ -426,11 +426,10 @@ class frontControllerApplication
 		if (!$this->ravenUser) {$logoutUrl = 'logoutexternal.html';}
 		if ($this->settings['externalAuth']) {$loginTextLink = "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]";}
 		if ($this->settings['internalAuth']) {
-			$logoutUrl = 'logoutinternal.html';
-			$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/logininternal.html?{$location}\">logged in</a>";
+			$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\">logged in</a>";
 		}
 		if ($authLinkVisibility) {
-			$headerHtml = '<p class="loggedinas noprint"' . ($authLimited ? ' title="[The login system is not visible to all users]"' : '') . '>' . ($this->user ? 'You are logged in as: <strong>' . $this->userVisibleIdentifier . ($this->userIsAdministrator ? ' (ADMIN)' : ($this->userStatus ? " ({$this->userStatus})" : '')) . "</strong> [<a href=\"{$this->baseUrl}/" . $logoutUrl . "\" class=\"logout\">log out</a>]" : $loginTextLink) . '</p>' . $headerHtml;
+			$headerHtml = '<p class="loggedinas noprint"' . ($authLimited ? ' title="[The login system is not visible to all users]"' : '') . '>' . ($this->user ? 'You are logged in as: <strong>' . $this->userVisibleIdentifier . ($this->userIsAdministrator ? ' (ADMIN)' : ($this->userStatus ? " ({$this->userStatus})" : '')) . "</strong> [<a href=\"{$this->baseUrl}/" . $this->actions['logoutinternal']['url'] . "\" class=\"logout\">log out</a>]" : $loginTextLink) . '</p>' . $headerHtml;
 		}
 		
 		# Show the header/tabs
@@ -451,7 +450,7 @@ class frontControllerApplication
 				if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
 				$loginTextLink = "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in (using Raven)</a>";
 				if ($this->settings['externalAuth']) {$loginTextLink = "log in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]";}
-				if ($this->settings['internalAuth']) {$loginTextLink = "<a href=\"{$this->baseUrl}/logininternal.html?{$location}\">log in</a> (or <a href=\"{$this->baseUrl}/register.html\">create an account</a>)";}
+				if ($this->settings['internalAuth']) {$loginTextLink = "<a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\">log in</a> (or <a href=\"{$this->baseUrl}/{$this->actions['register']['url']}\">create an account</a>)";}
 				echo "\n<p><strong>You need to " . $loginTextLink . " before you can " . ($this->actions[$this->action]['description'] ? htmlspecialchars (strtolower (strip_tags ($this->actions[$this->action]['description']))) : 'use this facility') . '.</strong></p>';
 				if (!$this->settings['internalAuth']) {
 					echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on Raven accounts</a> is available.)</p>";
@@ -899,7 +898,7 @@ class frontControllerApplication
 		}
 		
 		# Redirect
-		$redirectTo = $_SERVER['_SITE_URL'] . $this->baseUrl . ($this->settings['internalAuth'] ? '/register.html' : '/');	// Sadly, these have to be hard-coded as the action loading phase hasn't yet happened
+		$redirectTo = $_SERVER['_SITE_URL'] . $this->baseUrl . ($this->settings['internalAuth'] ? '/login/register/' : '/');	// Sadly, these have to be hard-coded as the action loading phase hasn't yet happened
 		application::sendHeader (302, $redirectTo);
 		
 		# Confirm success (in case the header redirection failed)
@@ -1654,8 +1653,6 @@ class frontControllerApplication
 		$internalAuthSettings = array (
 			'salt'								=> $this->settings['internalAuthSalt'],
 			'baseUrl'							=> $this->baseUrl,
-			'loginUrl'							=> '/logininternal.html',
-			'logoutUrl'							=> '/logoutinternal.html',
 			'database'							=> $this->settings['database'],
 			'applicationName'					=> $this->settings['applicationName'],
 			'administratorEmail'				=> $this->settings['administratorEmail'],
