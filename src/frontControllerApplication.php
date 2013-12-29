@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.20
+# Version 1.6.21
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -104,6 +104,12 @@ class frontControllerApplication
 			'description' => 'Reset a forgotten password',
 			'url' => 'login/resetpassword/',
 			'usetab' => 'home',
+		),
+		'accountdetails' => array (
+			'description' => 'Change login account details',
+			'url' => 'login/accountdetails/',
+			'usetab' => 'home',
+			'authentication' => true,
 		),
 		'loggedout' => array (
 			'description' => 'Logged out',
@@ -426,10 +432,11 @@ class frontControllerApplication
 		if (!$this->ravenUser) {$logoutUrl = 'logoutexternal.html';}
 		if ($this->settings['externalAuth']) {$loginTextLink = "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]";}
 		if ($this->settings['internalAuth']) {
+			$logoutUrl = $this->actions['logoutinternal']['url'];
 			$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\">logged in</a>";
 		}
 		if ($authLinkVisibility) {
-			$headerHtml = '<p class="loggedinas noprint"' . ($authLimited ? ' title="[The login system is not visible to all users]"' : '') . '>' . ($this->user ? 'You are logged in as: <strong>' . $this->userVisibleIdentifier . ($this->userIsAdministrator ? ' (ADMIN)' : ($this->userStatus ? " ({$this->userStatus})" : '')) . "</strong> [<a href=\"{$this->baseUrl}/" . $this->actions['logoutinternal']['url'] . "\" class=\"logout\">log out</a>]" : $loginTextLink) . '</p>' . $headerHtml;
+			$headerHtml = '<p class="loggedinas noprint"' . ($authLimited ? ' title="[The login system is not visible to all users]"' : '') . '>' . ($this->user ? 'You are logged in as: <strong>' . $this->userVisibleIdentifier . ($this->userIsAdministrator ? ' (ADMIN)' : ($this->userStatus ? " ({$this->userStatus})" : '')) . "</strong> [<a href=\"{$this->baseUrl}/" . $logoutUrl . "\" class=\"logout\">log out</a>]" : $loginTextLink) . '</p>' . $headerHtml;
 		}
 		
 		# Show the header/tabs
@@ -1321,6 +1328,19 @@ class frontControllerApplication
 	{
 		# Log out and confirm this status
 		$this->internalAuthClass->resetpassword ();
+		
+		# Assemble the HTML
+		$html  = $this->internalAuthClass->getHtml ();
+		
+		# Show the HTML
+		echo $html;
+	}
+	
+	# Login account details page
+	function accountdetails ()
+	{
+		# Log out and confirm this status
+		$this->internalAuthClass->accountdetails ();
 		
 		# Assemble the HTML
 		$html  = $this->internalAuthClass->getHtml ();
