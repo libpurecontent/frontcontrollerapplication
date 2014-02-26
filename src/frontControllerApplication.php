@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.21
+# Version 1.6.22
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -406,7 +406,9 @@ class frontControllerApplication
 			$headerHtml .= "\n</div>";
 		}
 		$headerHtml .= $this->showSubTabs ($this->action);
-		if (array_key_exists ('description', $this->actions[$this->action]) && $this->actions[$this->action]['description'] && !substr_count ($this->actions[$this->action]['description'], '%') && (!isSet ($this->actions[$this->action]['heading']) || $this->actions[$this->action]['heading'])) {$headerHtml .= "\n<h2>{$this->actions[$this->action]['description']}</h2>";}
+		if (isSet ($this->actions[$this->action]) && array_key_exists ('description', $this->actions[$this->action]) && $this->actions[$this->action]['description'] && !substr_count ($this->actions[$this->action]['description'], '%') && (!isSet ($this->actions[$this->action]['heading']) || $this->actions[$this->action]['heading'])) {
+			$headerHtml .= "\n<h2>{$this->actions[$this->action]['description']}</h2>";
+		}
 		
 		# Redirect to the page requested if necessary
 		if (!$this->login ()) {
@@ -785,6 +787,7 @@ class frontControllerApplication
 			if (isSet ($attributes['enableIf'])) {
 				if (!$attributes['enableIf']) {
 					unset ($this->actions[$action]);
+					if ($this->action == $action) {$this->action = 'home';}
 					continue;
 				}
 			}
@@ -804,7 +807,7 @@ class frontControllerApplication
 			# Add the tab
 			$tabs[$action]  = "<li class=\"{$action}" . ($isCurrent ? ' selected' : '') . "\">";
 			if ($this->actions[$action]['url'] !== false) {
-				$tabs[$action] .= "<a href=\"{$url}\"" . (array_key_exists ('description', $this->actions[$this->action]) ? ' title="' . trim (strip_tags ($attributes['description'])) . '"' : '') . (isSet ($attributes['linkId']) ? " id=\"{$attributes['linkId']}\"" : '') . ">";
+				$tabs[$action] .= "<a href=\"{$url}\"" . (array_key_exists ('description', $this->actions[$action]) ? ' title="' . trim (strip_tags ($attributes['description'])) . '"' : '') . (isSet ($attributes['linkId']) ? " id=\"{$attributes['linkId']}\"" : '') . ">";
 			}
 			if (isSet ($this->actions[$action]['icon'])) {
 				$tabs[$action] .= $this->icon ($this->actions[$action]['icon']);
