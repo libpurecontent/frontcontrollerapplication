@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.22
+# Version 1.6.23
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -620,7 +620,7 @@ class frontControllerApplication
 			'webmaster'										=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
 			'administratorEmail'							=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
 			'webmasterContactAddress'						=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
-			'feedbackRecipient'								=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
+			'feedbackRecipient'								=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),	#!# This ought to be the value of administratorEmail by default
 			'useCamUniLookup'								=> true,
 			'directoryIndex'								=> 'index.html',					# The directory index, used for local file retrieval
 			'userAgent'										=> 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)',	# The user-agent string used for external retrieval
@@ -1136,6 +1136,44 @@ class frontControllerApplication
 		
 		# Return the array
 		return $administrators;
+	}
+	
+	
+	# Function to return a list of administrators receiving e-mail
+	public function getAdministratorsReceivingEmail ($asStringImplode = ', ', $exceptEmails = array ())
+	{
+		# Create a list
+		$recipients = array ();
+		foreach ($this->administrators as $username => $administrator) {
+			if (isSet ($administrator['receiveEmail'])) {	// If this field is present, only include those receiving e-mail
+				if ($administrator['receiveEmail'] == 'Yes') {
+					$recipients[$username] = $administrator['email'];
+				}
+			} else {
+				$recipients[$username] = $administrator['email'];
+			}
+		}
+		
+		# Filter out unwanted if required
+		if ($exceptEmails) {
+			if (is_string ($exceptEmails)) {
+				$exceptEmails = array ($exceptEmails);
+			}
+			foreach ($exceptEmails as $index => $exceptEmail) {
+				if (!substr_count ($exceptEmail, '@')) {
+					$exceptEmails[$index] = $exceptEmail . '@cam.ac.uk';
+				}
+			}
+			$recipients = array_diff ($recipients, $exceptEmails);
+		}
+		
+		# Implode to string
+		if ($asStringImplode) {
+			$recipients = implode ($asStringImplode, $recipients);
+		}
+		
+		# Return the list
+		return $recipients;
 	}
 	
 	
@@ -1708,7 +1746,7 @@ class frontControllerApplication
 	
 	
 	# Function to show administrators
-	function administrators ($null = NULL, $boxClass = 'graybox', $showFields = array ('active' => 'Active?', 'email' => 'E-mail', 'privilege' => 'privilege', 'name' => 'name', 'forename' => 'forename', 'surname' => 'surname', ))
+	function administrators ($null = NULL, $boxClass = 'graybox', $showFields = array ('active' => 'Active?', 'receiveEmail' => 'Receive e-mail?', 'email' => 'E-mail', 'privilege' => 'privilege', 'name' => 'name', 'forename' => 'forename', 'surname' => 'surname', ))
 	{
 		# Start the HTML
 		$html  = '';
