@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.23
+# Version 1.6.24
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -1712,7 +1712,7 @@ class frontControllerApplication
 	{
 		# Assemble the settings to use
 		$internalAuthSettings = array (
-			'salt'								=> $this->settings['internalAuthSalt'],
+			'saltLegacyHashes'					=> $this->settings['internalAuthSalt'],
 			'baseUrl'							=> $this->baseUrl,
 			'database'							=> $this->settings['database'],
 			'applicationName'					=> $this->settings['applicationName'],
