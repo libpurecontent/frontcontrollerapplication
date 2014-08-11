@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.6.25
+# Version 1.7.0
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -116,6 +116,16 @@ class frontControllerApplication
 			'url' => 'loggedout.html',
 			'usetab' => 'home',
 		),
+		'cron' => array (
+			'description' => 'Cron hook for non-interactive processes',
+			'url' => 'cron/',
+			'export' => true,
+		),
+		'api' => array (
+			'description' => 'API (HTTP)',
+			'url' => 'api/',
+			'export' => true,
+		),
 		'data' => array (	// Used for e.g. AJAX calls, etc.
 			'description' => 'Data point',
 			'url' => 'data.html',
@@ -217,6 +227,9 @@ class frontControllerApplication
 		if ($this->settings['jQuery']) {
 			echo "\n\n\n<!-- jQuery -->\n" . '<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>' . "\n\n";
 		}
+		
+		# Set a lockfile location
+		$this->lockfile = $_SERVER['DOCUMENT_ROOT'] . $this->baseUrl . '/lockfile.txt';
 		
 		# Define the data URL, e.g. for use with ultimateForm::<widget>::autocomplete
 		$this->dataUrl = "{$_SERVER['_SITE_URL']}{$this->baseUrl}/data.html";
@@ -350,6 +363,17 @@ class frontControllerApplication
 		# Determine whether the action is an export type, i.e. has no house style or loaded outside the system
 		$this->exportType = ($disableAutoGui || (isSet ($this->actions[$this->action]['export']) && ($this->actions[$this->action]['export'])));
 		if ($this->exportType) {$this->settings['div'] = false;}
+		
+		# Load any stylesheet if supplied
+		if (!$this->exportType) {
+			$reflector = new ReflectionClass (get_class($this));
+			$applicationDirectory = dirname ($reflector->getFileName ());
+			$stylesheet = $applicationDirectory . $this->settings['applicationStylesheet'];
+			if (is_readable ($stylesheet)) {
+				$styles = file_get_contents ($stylesheet);
+				echo "\n\n" . '<style type="text/css">' . "\n\t" . str_replace ("\n", "\n\t", trim ($styles)) . "\n</style>\n";
+			}
+		}
 		
 		# Start a div if required to hold the application and define the ending div
 		if ($this->settings['div']) {echo "\n<div id=\"{$this->settings['div']}\">\n";}
@@ -649,6 +673,9 @@ class frontControllerApplication
 			'mkdirPermissions'								=> 0755,	// Permissions for mkdir calls; the default here is standard Unix
 			'chmodPermissions'								=> 0644,	// Permissions for chmod calls; the default here is standard Unix
 			'editingPagination'								=> 250,		// Pagination when editing the embedded record editor
+			'cronUsername'									=> false,	// HTTP username required for cron jobs
+			'apiUsername'									=> false,	// HTTP username required for API calls
+			'applicationStylesheet'							=> '/styles.css'	// Where / represents the root of the repository containing the application
 		);
 		
 		# Merge application defaults with the standard application defaults, with preference: constructor settings, application defaults, frontController application defaults
@@ -1377,6 +1404,7 @@ class frontControllerApplication
 		echo $html;
 	}
 	
+	
 	# Login account details page
 	function accountdetails ()
 	{
@@ -1388,6 +1416,186 @@ class frontControllerApplication
 		
 		# Show the HTML
 		echo $html;
+	}
+	
+	
+	# API (HTTP); needs to be extended
+	public function api ()
+	{
+		# Get the API calls defined by the application class
+		$classMethods = get_class_methods ($this);
+		$apiCalls = array ();
+		foreach ($classMethods as $classMethod) {
+			if (preg_match ('/^apiCall_([a-zA-Z]+)$/', $classMethod, $matches)) {
+				$apiCall = $matches[1];
+				$apiCalls[$apiCall] = $classMethod;		// e.g. foobar => apiCall_foobar
+			}
+		}
+		
+		# Ensure that apiCalls have been defined
+		if (!$apiCalls) {
+			$this->page404 ();
+			return false;
+		}
+		
+		# Initialise the API
+		if ($method = $this->loadApi ($apiCalls, $error)) {
+			
+			# Extract any ID
+			$id = (isSet ($_GET['id']) ? $_GET['id'] : NULL);
+			
+			# Obtain the data (which may be empty) from the API calls function; error is returned by reference
+			$function = $apiCalls[$method];
+			$data = $this->{$function} ($id, $error);	// i.e. uses class method defined as apiCall_foobar ($id, &$error = '')
+		}
+		
+		# If an error occured, set the error as the output
+		if ($error) {
+			$data = array ('error' => $error);
+		}
+		
+		# Compatibility for PHP<5.4 (while some servers still on PHP5.3)
+		if (!defined ('JSON_UNESCAPED_SLASHES')) {define ('JSON_UNESCAPED_SLASHES', 64);}
+		if (!defined ('JSON_PRETTY_PRINT')) {define ('JSON_PRETTY_PRINT', 128);}
+		if (!defined ('JSON_UNESCAPED_UNICODE')) {define ('JSON_UNESCAPED_UNICODE', 256);}
+		
+		# Send the data
+		header ('Content-type: application/json; charset=UTF-8');
+		echo json_encode ($data, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);	// Enable pretty-print; see: http://www.vinaysahni.com/best-practices-for-a-pragmatic-restful-api#pretty-print-gzip
+	}
+	
+	
+	# API loader function
+	private function loadApi ($apiCalls, &$error = '')
+	{
+		# End if not enabled
+		if (!$this->settings['apiUsername']) {
+			$error = 'Application error: The API is not enabled.';
+			return false;
+		}
+		
+		# Obtain the HTTP-supplied username and validate it
+		if (!$httpAuthUsername = $this->requestHttpAuthUsername ()) {
+			$error = 'A HTTP-supplied username has not been supplied.';	// Probably will never be shown, as a dialog box should be shown instead
+			return false;
+		}
+		
+		# Check the username matches
+		if ($httpAuthUsername != $this->settings['apiUsername']) {
+			$error = "The HTTP-supplied username ({$httpAuthUsername}) is not correct.";
+			return false;
+		}
+		
+		# Ensure a method is supplied
+		if (!isSet ($_GET['method']) || !strlen ($_GET['method'])) {
+			$error = 'No API method was supplied.';
+			return false;
+		}
+		
+		# Extract the method
+		$method = $_GET['method'];
+		if (substr_count ($method, '.')) {
+			$method = lcfirst (implode (array_map ('ucfirst', explode ('.', $method))));	// e.g. foo.bar => fooBar
+		}
+		
+		# Ensure the method is supported
+		if (!isSet ($apiCalls[$method])) {
+			$error = 'Invalid API resource specified.';
+			return false;
+		}
+		
+		# Unset the action and method from _GET, as callers should not need this
+		unset ($_GET['action']);
+		unset ($_GET['method']);
+		
+		# Return the method to run
+		return $method;
+	}
+	
+	
+	# Cron hook function for non-interactive processes; add using e.g.:
+	# 0 * * * * wget -q -O - http://theusername:@example.com/baseUrl/cron/
+	public function cron ()
+	{
+		# Ensure that a cronJobs function has been defined
+		if (!method_exists ($this, 'cronJobs')) {
+			echo "Application error: A cronJobs protected method has not been defined.";
+			return false;
+		}
+		
+		# End if not enabled
+		if (!$this->settings['cronUsername']) {
+			echo 'Application error: The cron system is not enabled.';
+			return false;
+		}
+		
+		# Ensure that certain characters have not been used as the username in the settings; see: http://stackoverflow.com/a/703341
+		if (preg_match ('/[%:@$]/', $this->settings['cronUsername'])) {
+			echo "Application error: The cron username setting is not correct.";
+			return false;
+		}
+		
+		# Obtain the HTTP-supplied username and validate it
+		if (!$httpAuthUsername = $this->requestHttpAuthUsername ()) {
+			echo 'A HTTP-supplied username has not been supplied.';	// Probably will never be shown, as a dialog box should be shown instead
+			return false;
+		}
+		
+		# Check the username matches
+		if ($httpAuthUsername != $this->settings['cronUsername']) {
+			echo "The HTTP-supplied username ({$httpAuthUsername}) is not correct.";
+			return false;
+		}
+		
+		# Run the cron jobs
+		$this->cronJobs ();
+	}
+	
+	
+	# Function to trigger HTTP auth (by the application)
+	private function requestHttpAuthUsername ()
+	{
+		# Obtain PHP-triggered HTTP Auth (mod_php)
+		if (isset ($_SERVER['PHP_AUTH_USER'])) {
+			return $_SERVER['PHP_AUTH_USER'];
+		}
+		
+		# Obtain PHP-triggered HTTP Basic Auth (other servers) username if supplied; the password is ignored; see: http://evertpot.com/223/
+		if (isset ($_SERVER['HTTP_AUTHENTICATION'])) {
+			if (strpos (strtolower ($_SERVER['HTTP_AUTHENTICATION']), 'basic') === 0) {
+				list ($username, $passwordIrrelevant) = explode (':', base64_decode (substr ($_SERVER['HTTP_AUTHORIZATION'], 6)));
+				return $username;
+			}
+		}
+		
+		# Trigger HTTP Basic Auth
+		header ('WWW-Authenticate: Basic realm="Specify the username, and anything as the password."');
+		header ('HTTP/1.0 401 Unauthorized');
+		
+		# Return false
+		return false;
+	}
+	
+	
+	# Function to show import status
+	public function importInProgress ()
+	{
+		# Return false if no lockfile
+		if (!file_exists ($this->lockfile)) {return false;}
+		
+		# Get the username and timestamp from the lockfile
+		$lockfileText = file_get_contents ($this->lockfile);
+		list ($username, $timestamp) = explode (' ', $lockfileText, 2);
+		
+		# Assemble the HTML
+		$html  = "\n<div class=\"graybox\">";
+		$html .= "\n<p class=\"warning\">An import (which was started by {$username} at {$timestamp}) is currently running; please try again later.</p>";
+		$html .= "\n<p class=\"warning\">This page will automatically refresh to show when the import is finished.</p>";
+		$html .= "\n<meta http-equiv=\"refresh\" content=\"10;URL=" . htmlspecialchars ($_SERVER['_PAGE_URL']) . "\">";
+		$html .= "\n</div>";
+		
+		# Return the HTML
+		return $html;
 	}
 	
 	
