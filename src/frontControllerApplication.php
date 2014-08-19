@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.7.1
+# Version 1.7.2
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -453,16 +453,17 @@ class frontControllerApplication
 		#!# Should have urlencode also?
 		$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: http://stackoverflow.com/questions/940905
 		$this->ravenUser = !substr_count ($this->user, '@');
-		$logoutUrl = 'logout.html';
-		$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/login.html?{$location}\" rel=\"nofollow\">logged in</a>";
-		if (!$this->ravenUser) {$logoutUrl = 'logoutexternal.html';}
-		if ($this->settings['externalAuth']) {$loginTextLink = "You are not currently logged in using [<a href=\"{$this->baseUrl}/login.html?{$location}\" rel=\"nofollow\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\" rel=\"nofollow\">Friends login</a>]";}
+		$loginUrl = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/login/' : $this->baseUrl . '/login.html');
+		$logoutUrl = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/logout/' : $this->baseUrl . '/logout.html');
+		$loginTextLink = "You are not currently <a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">logged in</a>";
+		if (!$this->ravenUser) {$logoutUrl = $this->baseUrl . '/logoutexternal.html';}
+		if ($this->settings['externalAuth']) {$loginTextLink = "You are not currently logged in using [<a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\" rel=\"nofollow\">Friends login</a>]";}
 		if ($this->settings['internalAuth']) {
-			$logoutUrl = $this->actions['logoutinternal']['url'];
+			$logoutUrl = $this->baseUrl . '/' . $this->actions['logoutinternal']['url'];
 			$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\" rel=\"nofollow\">logged in</a>";
 		}
 		if ($authLinkVisibility) {
-			$headerHtml = '<p class="loggedinas noprint"' . ($authLimited ? ' title="[The login system is not visible to all users]"' : '') . '>' . ($this->user ? 'You are logged in as: <strong>' . $this->userVisibleIdentifier . ($this->userIsAdministrator ? ' (ADMIN)' : ($this->userStatus ? " ({$this->userStatus})" : '')) . "</strong> [<a href=\"{$this->baseUrl}/" . $logoutUrl . "\" class=\"logout\" rel=\"nofollow\">log out</a>]" : $loginTextLink) . '</p>' . $headerHtml;
+			$headerHtml = '<p class="loggedinas noprint"' . ($authLimited ? ' title="[The login system is not visible to all users]"' : '') . '>' . ($this->user ? 'You are logged in as: <strong>' . $this->userVisibleIdentifier . ($this->userIsAdministrator ? ' (ADMIN)' : ($this->userStatus ? " ({$this->userStatus})" : '')) . '</strong> [<a href="' . $logoutUrl . "?{$location}\" class=\"logout\" rel=\"nofollow\">log out</a>]" : $loginTextLink) . '</p>' . $headerHtml;
 		}
 		
 		# Show the header/tabs
@@ -481,8 +482,8 @@ class frontControllerApplication
 			if ($this->settings['dataDisableAuth']) {$pagesNeverRequiringAuthentication[] = 'data';}
 			if (!in_array ($this->action, $pagesNeverRequiringAuthentication)) {
 				if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
-				$loginTextLink = "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in (using Raven)</a>";
-				if ($this->settings['externalAuth']) {$loginTextLink = "log in using [<a href=\"{$this->baseUrl}/login.html?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]";}
+				$loginTextLink = "<a href=\"{$loginUrl}?{$location}\">log in (using Raven)</a>";
+				if ($this->settings['externalAuth']) {$loginTextLink = "log in using [<a href=\"{$loginUrl}?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]";}
 				if ($this->settings['internalAuth']) {$loginTextLink = "<a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\">log in</a> (or <a href=\"{$this->baseUrl}/{$this->actions['register']['url']}\">create an account</a>)";}
 				echo "\n<p><strong>You need to " . $loginTextLink . " before you can " . ($this->actions[$this->action]['description'] ? htmlspecialchars (strtolower (strip_tags ($this->actions[$this->action]['description']))) : 'use this facility') . '.</strong></p>';
 				if (!$this->settings['internalAuth']) {
@@ -1611,7 +1612,8 @@ class frontControllerApplication
 	{
 		echo '
 		<p>You have logged out of Raven for this site.</p>
-		<p>If you have finished browsing, then you should completely exit your web browser. This is the best way to prevent others from accessing your personal information and visiting web sites using your identity. If for any reason you can\'t exit your browser you should first log-out of all other personalized sites that you have accessed and then <a href="' . $this->settings['ravenCentralLogoutUrl'] . '" target="_blank">logout from the central authentication service</a>.</p>';
+		<p>If you have finished browsing, then you should completely exit your web browser. This is the best way to prevent others from accessing your personal information and visiting web sites using your identity.</p>
+		<p>If for any reason you can\'t exit your browser you should first log-out of all other personalised sites that you have accessed and then <a href="' . $this->settings['ravenCentralLogoutUrl'] . '" target="_blank">logout from the central authentication service</a>.</p>';
 	}
 	
 	
