@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.7.2
+# Version 1.7.3
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -1753,6 +1753,7 @@ class frontControllerApplication
 		# Databind a form
 		$form = new form (array (
 			'databaseConnection'	=> $this->databaseConnection,
+			'div' => 'ultimateform settings',
 			'reappear' => true,
 			'formCompleteText' => false,
 			'displayRestrictions' => false,
