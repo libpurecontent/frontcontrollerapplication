@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.7.3
+# Version 1.7.4
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -223,11 +223,6 @@ class frontControllerApplication
 		# Show header if required
 		echo $header;
 		
-		# Load jQuery if required
-		if ($this->settings['jQuery']) {
-			echo "\n\n\n<!-- jQuery -->\n" . '<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>' . "\n\n";
-		}
-		
 		# Set a lockfile location
 		$this->lockfile = $_SERVER['DOCUMENT_ROOT'] . $this->baseUrl . '/lockfile.txt';
 		
@@ -364,6 +359,13 @@ class frontControllerApplication
 		$this->exportType = ($disableAutoGui || (isSet ($this->actions[$this->action]['export']) && ($this->actions[$this->action]['export'])));
 		if ($this->exportType) {$this->settings['div'] = false;}
 		
+		# Load jQuery if required
+		if (!$this->exportType) {
+			if ($this->settings['jQuery']) {
+				echo "\n\n\n<!-- jQuery -->\n" . '<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>' . "\n\n";
+			}
+		}
+		
 		# Load any stylesheet if supplied
 		if (!$this->exportType) {
 			$reflector = new ReflectionClass (get_class($this));
@@ -480,6 +482,7 @@ class frontControllerApplication
 		if (!$this->user && ($authRequiredByAction || $authRequiredGlobally)) {
 			$pagesNeverRequiringAuthentication = array ('register', 'resetpassword', );
 			if ($this->settings['dataDisableAuth']) {$pagesNeverRequiringAuthentication[] = 'data';}
+			if ($this->settings['apiUsername']) {$pagesNeverRequiringAuthentication[] = 'api';}
 			if (!in_array ($this->action, $pagesNeverRequiringAuthentication)) {
 				if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
 				$loginTextLink = "<a href=\"{$loginUrl}?{$location}\">log in (using Raven)</a>";
@@ -657,6 +660,7 @@ class frontControllerApplication
 			'useAdmin'										=> true,
 			'revealAdminFunctions'							=> false,	// Whether to show admins-only tabs etc to non-administrators
 			'useFeedback'									=> true,
+			'disableTabs'									=> false,
 			'helpTab'										=> false,
 			'useEditing'									=> false,	// Whether to enable editing as a main tab
 			'debug'											=> false,	# Whether to switch on debugging info
@@ -775,6 +779,7 @@ class frontControllerApplication
 	
 	
 	# Function to show tabs of the actions
+	#!# Currently this mixes modification of the action registry with display of the tabs
 	function showTabs ($current, $class = 'tabs')
 	{
 		# Switch tab context
@@ -853,6 +858,11 @@ class frontControllerApplication
 		# Add on a surrounding div if required
 		if ($this->settings['tabDivId']) {
 			$html = "\n" . "<div id=\"{$this->settings['tabDivId']}\">" . "\n" . $html . "\n</div>";
+		}
+		
+		# If not showing the tabs, cancel the HTML
+		if ($this->settings['disableTabs']) {
+			$html = '';
 		}
 		
 		# Return the HTML
