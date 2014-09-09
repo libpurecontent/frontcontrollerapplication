@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.7.4
+# Version 1.7.5
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -362,7 +362,7 @@ class frontControllerApplication
 		# Load jQuery if required
 		if (!$this->exportType) {
 			if ($this->settings['jQuery']) {
-				echo "\n\n\n<!-- jQuery -->\n" . '<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1/jquery.min.js"></script>' . "\n\n";
+				echo "\n\n\n<!-- jQuery -->\n" . '<script type="text/javascript" src="//code.jquery.com/jquery.min.js"></script>' . "\n\n";
 			}
 		}
 		
