@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.7.5
+# Version 1.7.6
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -366,14 +366,24 @@ class frontControllerApplication
 			}
 		}
 		
+		# Determine the application directory
+		$reflector = new ReflectionClass (get_class($this));
+		$applicationDirectory = dirname ($reflector->getFileName ());
+		
 		# Load any stylesheet if supplied
 		if (!$this->exportType) {
-			$reflector = new ReflectionClass (get_class($this));
-			$applicationDirectory = dirname ($reflector->getFileName ());
 			$stylesheet = $applicationDirectory . $this->settings['applicationStylesheet'];
 			if (is_readable ($stylesheet)) {
 				$styles = file_get_contents ($stylesheet);
 				echo "\n\n" . '<style type="text/css">' . "\n\t" . str_replace ("\n", "\n\t", trim ($styles)) . "\n</style>\n";
+			}
+		}
+		
+		# Determine the data directory
+		if ($this->settings['dataDirectory']) {
+			$dataDirectory = $applicationDirectory . $this->settings['dataDirectory'];
+			if (is_dir ($dataDirectory) && is_readable ($dataDirectory)) {
+				$this->dataDirectory = $dataDirectory;
 			}
 		}
 		
@@ -680,7 +690,8 @@ class frontControllerApplication
 			'editingPagination'								=> 250,		// Pagination when editing the embedded record editor
 			'cronUsername'									=> false,	// HTTP username required for cron jobs
 			'apiUsername'									=> false,	// HTTP username required for API calls
-			'applicationStylesheet'							=> '/styles.css'	// Where / represents the root of the repository containing the application
+			'applicationStylesheet'							=> '/styles.css',	// Where / represents the root of the repository containing the application
+			'dataDirectory'							=> '/data/',	// Where / represents the root of the repository containing user data files
 		);
 		
 		# Merge application defaults with the standard application defaults, with preference: constructor settings, application defaults, frontController application defaults
