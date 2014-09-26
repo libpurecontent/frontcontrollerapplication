@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.7.6
+# Version 1.7.7
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -347,8 +347,7 @@ class frontControllerApplication
 */
 		
 		# Assign the item (basically to deal with the common scenario of a function needing an ID parameter
-		#!# strtolower is potentially unhelpful here
-		$this->item = (isSet ($_GET['item']) ? strtolower ($_GET['item']) : false);
+		$this->item = (isSet ($_GET['item']) ? ($this->settings['itemCaseSensitive'] ? $_GET['item'] : strtolower ($_GET['item'])) : false);
 		
 		# Compatibility fix to pump a script-supplied argument into the query string
 		if (isSet ($_SERVER['argv']) && isSet ($_SERVER['argv'][1]) && preg_match ('/^action=/', $_SERVER['argv'][1])) {
@@ -691,7 +690,8 @@ class frontControllerApplication
 			'cronUsername'									=> false,	// HTTP username required for cron jobs
 			'apiUsername'									=> false,	// HTTP username required for API calls
 			'applicationStylesheet'							=> '/styles.css',	// Where / represents the root of the repository containing the application
-			'dataDirectory'							=> '/data/',	// Where / represents the root of the repository containing user data files
+			'dataDirectory'									=> '/data/',	// Where / represents the root of the repository containing user data files
+			'itemCaseSensitive'								=> false,	// Whether an $item value fed to an action is case-sensitive; if not, it is converted to lower-case
 		);
 		
 		# Merge application defaults with the standard application defaults, with preference: constructor settings, application defaults, frontController application defaults
