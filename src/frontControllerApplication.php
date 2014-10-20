@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.7.7
+# Version 1.7.8
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -692,6 +692,7 @@ class frontControllerApplication
 			'applicationStylesheet'							=> '/styles.css',	// Where / represents the root of the repository containing the application
 			'dataDirectory'									=> '/data/',	// Where / represents the root of the repository containing user data files
 			'itemCaseSensitive'								=> false,	// Whether an $item value fed to an action is case-sensitive; if not, it is converted to lower-case
+			'corsDomains'									=> array (),	// Domains enabled for CORS headers
 		);
 		
 		# Merge application defaults with the standard application defaults, with preference: constructor settings, application defaults, frontController application defaults
@@ -2217,6 +2218,18 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		
 		# Return the HTML
 		return $html;
+	}
+	
+	
+	# CORS sending headers
+	public function corsHeaders ()
+	{
+		# Send allowed headers for authorised sites; see: http://stackoverflow.com/a/1850482 and http://caniuse.com/#search=CORS
+		if (isSet ($_SERVER['HTTP_ORIGIN'])) {	// NB HTTP_ORIGIN is HTML5-specific so not yet available in all browsers
+			if (in_array ($_SERVER['HTTP_ORIGIN'], $this->settings['corsDomains'])) {
+				header ('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
+			}
+		}
 	}
 	
 	
