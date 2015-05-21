@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.7.8
+# Version 1.7.9
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -366,12 +366,12 @@ class frontControllerApplication
 		}
 		
 		# Determine the application directory
-		$reflector = new ReflectionClass (get_class($this));
-		$applicationDirectory = dirname ($reflector->getFileName ());
+		$reflector = new ReflectionClass (get_class ($this));
+		$this->applicationRoot = dirname ($reflector->getFileName ());
 		
 		# Load any stylesheet if supplied
 		if (!$this->exportType) {
-			$stylesheet = $applicationDirectory . $this->settings['applicationStylesheet'];
+			$stylesheet = $this->applicationRoot . $this->settings['applicationStylesheet'];
 			if (is_readable ($stylesheet)) {
 				$styles = file_get_contents ($stylesheet);
 				echo "\n\n" . '<style type="text/css">' . "\n\t" . str_replace ("\n", "\n\t", trim ($styles)) . "\n</style>\n";
@@ -380,7 +380,7 @@ class frontControllerApplication
 		
 		# Determine the data directory
 		if ($this->settings['dataDirectory']) {
-			$dataDirectory = $applicationDirectory . $this->settings['dataDirectory'];
+			$dataDirectory = $this->applicationRoot . $this->settings['dataDirectory'];
 			if (is_dir ($dataDirectory) && is_readable ($dataDirectory)) {
 				$this->dataDirectory = $dataDirectory;
 			}
