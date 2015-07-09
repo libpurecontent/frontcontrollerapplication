@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.7.9
+# Version 1.7.10
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -1601,7 +1601,7 @@ class frontControllerApplication
 	
 	
 	# Function to show import status
-	public function importInProgress ()
+	public function importInProgress ($detectStaleLockfileHours = 24)
 	{
 		# Return false if no lockfile
 		if (!file_exists ($this->lockfile)) {return false;}
@@ -1611,11 +1611,22 @@ class frontControllerApplication
 		list ($username, $timestamp) = explode (' ', $lockfileText, 2);
 		
 		# Assemble the HTML
-		$html  = "\n<div class=\"graybox\">";
-		$html .= "\n<p class=\"warning\">An import (which was started by {$username} at {$timestamp}) is currently running; please try again later.</p>";
-		$html .= "\n<p class=\"warning\">This page will automatically refresh to show when the import is finished.</p>";
-		$html .= "\n<meta http-equiv=\"refresh\" content=\"10;URL=" . htmlspecialchars ($_SERVER['_PAGE_URL']) . "\">";
+		$html  = "\n<meta http-equiv=\"refresh\" content=\"10;URL=" . htmlspecialchars ($_SERVER['_PAGE_URL']) . "\">";
+		$html .= "\n<div class=\"graybox\">";
+		$html .= "\n\t<p class=\"warning\">An import (which was started by {$username} at {$timestamp}) is currently running; please try again later.</p>";
+		$html .= "\n\t<p class=\"warning\">This page will automatically refresh to show when the import is finished.</p>";
 		$html .= "\n</div>";
+		
+		# Detect a stale lockfile
+		if ($detectStaleLockfileHours) {
+			$startTime = strtotime ($timestamp);
+			$now = time ();
+			$maximumPeriod = $detectStaleLockfileHours * 60 * 60;
+			if (($now - $startTime) > $maximumPeriod) {
+				$adminMessage = "A stale lockfile, created at {$timestamp}, was detected.";
+				$this->reportError ($adminMessage, $publicMessage = false);
+			}
+		}
 		
 		# Return the HTML
 		return $html;
