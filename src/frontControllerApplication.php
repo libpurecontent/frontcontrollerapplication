@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.7.10
+# Version 1.7.11
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -250,7 +250,7 @@ class frontControllerApplication
 		# If required, make connections to the database server and ensure the tables exist
 		if ($this->settings['useDatabase']) {
 			require_once ('database.php');
-			$this->databaseConnection = new database ($this->settings['hostname'], $this->settings['username'], $this->settings['password'], $this->settings['database'], $this->settings['vendor'], $this->settings['logfile'], $this->user);
+			$this->databaseConnection = new database ($this->settings['hostname'], $this->settings['username'], $this->settings['password'], $this->settings['database'], $this->settings['vendor'], $this->settings['logfile'], $this->user, $this->settings['nativeTypes']);
 			if (!$this->databaseConnection->connection) {
 				echo $this->databaseConnection->reportError ($this->settings['administratorEmail'], $this->settings['applicationName']);
 				echo $footer;
@@ -643,6 +643,7 @@ class frontControllerApplication
 			'database'										=> NULL,
 			'databaseStrictWhere'							=> false,	// Whether automatically-constructed WHERE=... clauses do proper, exact comparisons, so that id="1 x" doesn't match against id value 1 in the database
 			'vendor'										=> 'mysql',	// Database vendor
+			'nativeTypes'									=> false,	// Whether to enable native types in the database (e.g. INT columns return values as int); a future release will change this to true
 			'installerUsername'								=> 'root',	// Username for database installer account
 			'installerPassword'								=> false,	// Password for database installer account; if not defined, the user will be prompted for it with a GUI form
 			'jQuery'										=> false,	// Whether to load jQuery
@@ -970,7 +971,7 @@ class frontControllerApplication
 	private function installerDatabaseConnection ($password, &$errorMessage = '')
 	{
 		# Attempt the connection
-		$installerDatabaseConnection = new database ($this->settings['hostname'], $this->settings['installerUsername'], $password, $this->settings['database'], $this->settings['vendor'], $this->settings['logfile'], $this->user);
+		$installerDatabaseConnection = new database ($this->settings['hostname'], $this->settings['installerUsername'], $password, $this->settings['database'], $this->settings['vendor'], $this->settings['logfile'], $this->user, $this->settings['nativeTypes']);
 		
 		# End if no connection, defining the error message
 		if (!$installerDatabaseConnection->connection) {
