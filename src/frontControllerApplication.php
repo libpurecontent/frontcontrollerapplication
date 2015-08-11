@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.7.11
+# Version 1.8.0
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -1598,6 +1598,265 @@ class frontControllerApplication
 		
 		# Return false
 		return false;
+	}
+	
+	
+	# Function to provide a general-purpose importing user interface
+	public function importUi ($baseFilenames, $importTypes = array ('full' => 'FULL import'), $fileCreationInstructionsHtml, $fileExtension = 'xml')
+	{
+		# Allow long-running processes
+		ini_set ('max_execution_time', 0);
+		
+		# Start the HTML
+		$html = '';
+		
+		# Ensure that the import routine has been defined in the client program
+		if (!method_exists ($this, 'doImport')) {
+			$html .= "\n" . '<p class="warning">Importing is not enabled.</p>';
+			echo $html;
+			return;
+		}
+		
+		# Start a timer
+		$startTime = time ();
+		
+		# Determine the dated filenames for each expected files
+		$today = date ('Ymd');
+		$expectedFiles = array ();
+		foreach ($baseFilenames as $baseFilename) {
+			$expectedFiles[$baseFilename] = $baseFilename . $today . '.' . $fileExtension;
+		}
+		
+		# Start the HTML with instructions
+		$html .= "\n" . '<p>Imports can be done using this form.</p>';
+		$html .= "\n" . '<ol class="spaced">';
+		$html .= "\n\t" . '<li><p><strong>Create the exports</strong> as follows:</p>';
+		$html .= "\n\t\t" . '<div class="graybox">';
+		$html .= "\n\t\t\t" . $fileCreationInstructionsHtml;
+		$html .= "\n\t\t" . '</div></li>';
+		$html .= "\n\t" . "<li><p><strong>Upload the export files</strong> to this website, using this form. Note that this can take several minutes, so please be patient.</p>";
+		$html .= $this->importUploadFilesForm ($expectedFiles);
+		$html .= "\n\t" . '</li>';
+		$html .= "\n\t" . '<li><p><strong>Run the import</strong> using the form below. This will reset the data in this reporting system.</p>';
+		$html .= $this->importControl ($expectedFiles, $importTypes, $fileExtension, $done);
+		$html .= "\n\t" . '</li>';
+		$html .= "\n" . '</ol>';
+		
+		# Show how long the import took
+		if ($done) {
+			$finishTime = time ();
+			$seconds = $finishTime - $startTime;
+			$html .= "\n<p>The import took: {$seconds} seconds.</p>";
+		}
+		
+		# Show the HTML
+		echo $html;
+	}
+	
+	
+	# Function to create an upload form for importing
+	private function importUploadFilesForm ($expectedFiles)
+	{
+		# Define the directory
+		$this->exportsDirectory = $this->applicationRoot . '/exports/';
+		
+		# Start the HTML
+		$html = '';
+		
+		# Create the form
+		$form = new form (array (
+			'submitButtonText' => 'Upload!',
+			'name' => 'upload',
+			'div' => false,
+			'displayRestrictions' => false,
+			'formCompleteText' => false,
+			'requiredFieldIndicator' => false,
+			'submitButtonAccesskey' => false,
+		));
+		$i = 0;
+		foreach ($expectedFiles as $basename => $filename) {
+			$form->upload (array (
+				'name'					=> 'file' . $i++,
+				'title'					=> $basename . ' file',
+				'directory'				=> $this->exportsDirectory,
+				// 'output'				=> array ('processing' => 'compiled'),
+				'required'				=> 1,
+				'enableVersionControl'	=> true,
+				'forcedFileName'		=> pathinfo ($filename, PATHINFO_FILENAME),
+				'allowedExtensions'		=> array (pathinfo ($filename, PATHINFO_EXTENSION)),
+				'lowercaseExtension'	=> true,
+			));
+		}
+		
+		# Process the form, and show a message when done
+		if ($result = $form->process ($html)) {
+			$html = "\n" . "<p>{$this->tick} The " . (count ($expectedFiles) == 1 ? 'file' : 'files') . ' should now be listed in the import box below.</p>';
+		}
+		
+		# Surround with a box
+		$html = "\n<div class=\"graybox\">\n" . $html . "\n</div>";
+		
+		# Return the HTML
+		return $html;
+	}
+	
+	
+	# Function to control the actual import
+	private function importControl ($expectedFiles, $importTypes, $fileExtension, &$done = false)
+	{
+		# Start the HTML
+		$html = '';
+		
+		# Determine the export file sets, or end
+		if (!$exportFiles = $this->importAvailableFileSets ($expectedFiles)) {
+			$html .= "\n<div class=\"graybox\">";
+			if (count ($expectedFiles) > 1) {
+				$html .= "\n\t<p class=\"warning\">No export file sets were found. Please follow the instructions above to create a set.</p>";
+			} else {
+				$html .= "\n\t<p class=\"warning\">No export files were found. Please follow the instructions above to create one.</p>";
+			}
+			$html .= "\n</div>";
+			return $html;
+		}
+		
+		# Ensure another import is not running
+		if ($importHtml = $this->importInProgress ()) {
+			$html .= $importHtml;
+			return $html;
+		}
+		
+		# Create the form
+		if (!$result = $this->importRunForm ($exportFiles, $importTypes, $html)) {
+			return $html;
+		}
+		
+		/*
+		# State that the import is now running
+		$html = "\n<p>Import now running (can take 5-10 minutes)&hellip;</p>";
+		
+		# Flush the HTML so far
+		echo $html;
+		ob_flush ();
+		flush ();
+		*/
+		
+		# Determine the chosen files
+		$files = array ();
+		foreach ($expectedFiles as $basename => $filename) {
+			$files[$basename] = $this->exportsDirectory . $basename . $result['date'] . '.' . $fileExtension;
+		}
+		
+		# Write the lockfile
+		file_put_contents ($this->lockfile, $_SERVER['REMOTE_USER'] . ' ' . date ('Y-m-d H:i:s'));
+		
+		# Run the import
+		$done = $this->doImport ($files, $result['importtype'], $html);
+		
+		# Remove the lockfile
+		unlink ($this->lockfile);
+		
+		# Return the HTML
+		return $html;
+	}
+	
+	
+	# Function to get the latest export file sets
+	private function importAvailableFileSets ($expectedFiles, &$errorHtml = '')
+	{
+		# Ensure the directory is readable
+		if (!is_readable ($this->exportsDirectory)) {
+			$errorHtml = "\n<p class=\"warning\">The directory {$this->exportsDirectory} could not be accessed. Please check the file permissions.</p>";
+			return false;
+		}
+		
+		# Obtain an array of all files in the directory or end
+		require_once ('directories.php');
+		if (!$files = directories::listFiles ($this->exportsDirectory, array (), true, $skipUnreadableFiles = true, $skipZeroLengthFiles = true)) {
+			$errorHtml = "\n<p class=\"warning\">There are no files uploaded yet.</p>";
+			return false;
+		}
+		
+		# Group by date
+		$groups = array ();
+		foreach ($files as $filename => $attributes) {
+			if (preg_match ('/^([a-z]+)([0-9]{8}).([a-z]+)$/', $filename, $matches)) {
+				$date = $matches[2];
+				$type = $matches[1];
+				$groups[$date][$type] = $filename;
+			}
+		}
+		
+		# Filter to those having complete groups only, resulting in array(date=>dateString, date=>dateString, ...)
+		$listing = array ();
+		foreach ($groups as $date => $files) {
+			if (!array_diff (array_keys ($expectedFiles), array_keys ($files))) {
+				$listing[$date] = $this->importDateString ($date);
+			}
+		}
+		
+		# Reverse the order to be most-recent first
+		krsort ($listing);
+		
+		# Return the file path
+		return $listing;
+	}
+	
+	
+	# Function to get the export date as a string
+	private function importDateString ($date)
+	{
+		# Determine the filename
+		$date = date_create_from_format ('Ymd', $date);
+		$string = date_format ($date, 'jS F Y');
+		
+		# Return the string
+		return $string;
+	}
+	
+	
+	# Function to create the run import form
+	private function importRunForm ($exportFiles, $importTypes, &$html)
+	{
+		# Determine the most recent file
+		$exportFilesKeys = array_keys ($exportFiles);
+		$mostRecent = reset ($exportFilesKeys);
+		
+		# Create the form
+		$form = new form (array (
+			'submitButtonText' => 'Begin import!',
+			'div' => 'graybox',
+			'name' => 'import',
+		));
+		$form->select (array ( 
+		    'name'		=> 'date', 
+		    'title'		=> 'Select export files dated', 
+		    'values'	=> $exportFiles,
+		    'required'	=> true,
+			'default'	=> $mostRecent,
+		));
+		if (count ($importTypes) != 1) {
+			$form->select (array (
+			    'name'		=> 'importtype', 
+			    'title'		=> 'Import type', 
+			    'values'	=> $importTypes,
+			    'required'	=> true,
+				'default'	=> 'full',
+			));
+		}
+		
+		# End if not submitted
+		$result = $form->process ($html);
+		
+		# If only one import type, return that
+		if ($result) {
+			if (count ($importTypes) == 1) {
+				reset ($array);
+				$result['importtype'] = key ($array);
+			}
+		}
+		
+		# Return the status
+		return $result;
 	}
 	
 	
