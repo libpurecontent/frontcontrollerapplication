@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.8.0
+# Version 1.9.0
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -121,10 +121,23 @@ class frontControllerApplication
 			'url' => 'cron/',
 			'export' => true,
 		),
+		'templates' => array (
+			'description' => 'Templates',
+			'url' => 'templates/',
+			'parent' => 'admin',
+			'subtab' => 'Templates',
+			'icon' => 'tag',
+			'administrator' => true,
+		),
 		'api' => array (
 			'description' => 'API (HTTP)',
-			'url' => 'api/',
+			'url' => 'api/%s',
 			'export' => true,
+		),
+		'apidocumentation' => array (
+			'description' => 'API (HTTP)',
+			'url' => 'api/',
+			'administrator' => true,
 		),
 		'data' => array (	// Used for e.g. AJAX calls, etc.
 			'description' => 'Data point',
@@ -150,6 +163,10 @@ class frontControllerApplication
 	
 	# Tab forcing
 	var $tabForced = false;
+	
+	# Templating
+	public $template = array ();
+	public $templateFunctions = array ();	// NB Functions must be within the class, not static, and marked public
 	
 	
 	# Constructor
@@ -402,7 +419,7 @@ class frontControllerApplication
 		}
 		
 		# Move feedback and admin to the end
-		$functions = array ('editing', 'profile', 'feedback', 'help', 'admin');
+		$functions = array ('editing', 'profile', 'import', 'templates', 'apidocumentation', 'feedback', 'help', 'admin');
 		foreach ($functions as $function) {
 			if (isSet ($this->actions[$function])) {
 				$temp{$function} = $this->actions[$function];
@@ -589,6 +606,9 @@ class frontControllerApplication
 			header ('Expires: Sat, 26 Jul 1997 05:00:00 GMT');		// Date in the past
 		}
 		
+		# Initialise templating if required
+		$this->templateHandle = $this->initialiseTemplating ();
+		
 		# Perform the action
 		if (!$disableAutoGui) {
 			$this->performAction ($this->doAction, $this->item);
@@ -694,6 +714,8 @@ class frontControllerApplication
 			'dataDirectory'									=> '/data/',	// Where / represents the root of the repository containing user data files
 			'itemCaseSensitive'								=> false,	// Whether an $item value fed to an action is case-sensitive; if not, it is converted to lower-case
 			'corsDomains'									=> array (),	// Domains enabled for CORS headers
+			'useTemplating'									=> false,	// Whether to enable templating
+			'templatesDirectory'							=> '%applicationRoot/app/views/',
 		);
 		
 		# Merge application defaults with the standard application defaults, with preference: constructor settings, application defaults, frontController application defaults
@@ -754,6 +776,7 @@ class frontControllerApplication
 		if (!$this->settings['useAdmin']) {unset ($actions['admin']);}
 		if (!$this->settings['useFeedback']) {unset ($actions['feedback']);}
 		if (!$this->settings['useEditing']) {unset ($actions['editing']);}
+		if (!$this->settings['useTemplating']) {unset ($actions['templates']);}
 		if (!$this->enableProfileTab) {unset ($actions['profile']);}
 		if (!$this->enableSettingsSubtab) {unset ($actions['settings']);}
 		
@@ -1443,8 +1466,56 @@ class frontControllerApplication
 	}
 	
 	
-	# API (HTTP); needs to be extended
-	public function api ()
+	# API documentation page
+	public function apidocumentation ($introductionHtml = '')
+	{
+		# Create a list of API calls
+		$apiCalls = $this->getApiCalls (true);
+		
+		# Ensure that apiCalls have been defined
+		if (!$apiCalls) {
+			$this->page404 ();
+			return false;
+		}
+		
+		# Start the HTML
+		$html = "\n<p>This page details the API calls available.</p>";
+		
+		# Add introduction if any
+		if (method_exists ($this, 'apidocumentationIntroduction')) {
+			$html .= $this->apidocumentationIntroduction ();
+		}
+		
+		# Add drop-down list
+		$list = array ();
+		foreach ($apiCalls as $apiCall => $documentationMethod) {
+			$list[$apiCall] = "<a href=\"#{$apiCall}\">{$apiCall}</a>";
+		}
+		$html .= application::htmlUl ($list);
+		
+		# Add documentation for each API call
+		foreach ($apiCalls as $apiCall => $documentationMethod) {
+			
+			# Add heading
+			$html .= "\n<h2 class=\"apidocumentation\" id=\"{$apiCall}\"><a href=\"#{$apiCall}\">#</a> {$apiCall}</h2>";
+			
+			# State if no documentation
+			if (!method_exists ($this, $documentationMethod)) {
+				$html .= "\n<p><em>No documentation available yet.</em></p>";
+				continue;
+			}
+			
+			# Add documentation
+			$html .= $this->{$documentationMethod} ();
+		}
+		
+		# Show the HTML
+		echo $html;
+	}
+	
+	
+	# Function to get the list of API calls
+	private function getApiCalls ($documentationMode = false)
 	{
 		# Get the API calls defined by the application class
 		$classMethods = get_class_methods ($this);
@@ -1452,9 +1523,23 @@ class frontControllerApplication
 		foreach ($classMethods as $classMethod) {
 			if (preg_match ('/^apiCall_([a-zA-Z]+)$/', $classMethod, $matches)) {
 				$apiCall = $matches[1];
+				if ($documentationMode) {
+					$classMethod = str_replace ('apiCall_', 'apiCallDocumentation_', $classMethod);
+				}
 				$apiCalls[$apiCall] = $classMethod;		// e.g. foobar => apiCall_foobar
 			}
 		}
+		
+		# Return the list
+		return $apiCalls;
+	}
+	
+	
+	# API (HTTP); needs to be extended
+	public function api ()
+	{
+		# Get the list of API calls
+		$apiCalls = $this->getApiCalls ();
 		
 		# Ensure that apiCalls have been defined
 		if (!$apiCalls) {
@@ -1637,7 +1722,7 @@ class frontControllerApplication
 		$html .= "\n\t" . "<li><p><strong>Upload the export files</strong> to this website, using this form. Note that this can take several minutes, so please be patient.</p>";
 		$html .= $this->importUploadFilesForm ($expectedFiles);
 		$html .= "\n\t" . '</li>';
-		$html .= "\n\t" . '<li><p><strong>Run the import</strong> using the form below. This will reset the data in this reporting system.</p>';
+		$html .= "\n\t" . '<li><p><strong>Run the import</strong> using the form below. This will reset the data in this system.</p>';
 		$html .= $this->importControl ($expectedFiles, $importTypes, $fileExtension, $done);
 		$html .= "\n\t" . '</li>';
 		$html .= "\n" . '</ol>';
@@ -1850,8 +1935,8 @@ class frontControllerApplication
 		# If only one import type, return that
 		if ($result) {
 			if (count ($importTypes) == 1) {
-				reset ($array);
-				$result['importtype'] = key ($array);
+				reset ($importTypes);
+				$result['importtype'] = key ($importTypes);
 			}
 		}
 		
@@ -2648,6 +2733,177 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		
 		# Return the HTML
 		return $html;
+	}
+	
+	
+	# Function to initialise templating
+	public function initialiseTemplating ()
+	{
+		# End if not enabled
+		if (!$this->settings['useTemplating']) {return NULL;}
+		
+		# Add support for application root in the template setting
+		$this->settings['templatesDirectory'] = str_replace ('%applicationRoot', $this->applicationRoot, $this->settings['templatesDirectory']);
+		
+		# Load templating
+		require_once ('smarty/libs/Smarty.class.php');
+		$templateHandle = new Smarty ();
+		// $templateHandle->caching = 0;
+		// $templateHandle->force_compile = true;
+		$templateHandle->setTemplateDir ($this->settings['templatesDirectory']);
+		$templateHandle->setCompileDir ($this->applicationRoot . '/tmp/templates_c/');
+		$tplDirectory = $this->applicationRoot . "/tmp/templates_tpl/";
+		if (!is_dir ($tplDirectory)) {
+			mkdir ($tplDirectory, 0775, true);
+		}
+		$templateHandle->assign ('templates_tpl', $tplDirectory);
+		
+		# Register plugin functions
+		foreach ($this->templateFunctions as $function) {
+			$templateHandle->registerPlugin ('modifier', $function, array ($this, $function));
+		}
+		
+		# Return the handle
+		return $templateHandle;
+	}
+	
+	
+	# Function to provide templatisation
+	public function templatise ()
+	{
+		# Assign each provided placeholder
+		foreach ($this->template as $placeholder => $fragmentHtml) {
+			$this->templateHandle->assign ($placeholder, $fragmentHtml);
+		}
+		
+		# Compile the HTML
+		$html = $this->templateHandle->fetch ($this->action . '.tpl');
+		
+		# Return the HTML
+		return $html;
+	}
+	
+	
+	# Function to list and edit templates
+	public function templates ($template)
+	{
+		# Start the HTML
+		$html = '';
+		
+		# Ensure the directory is writable
+		$this->settings['templatesDirectory'];
+		if (!is_writable ($this->settings['templatesDirectory'])) {
+			$html .= "\n<p class=\"error\">The application is not set up correctly - the template directory at <tt>{$this->settings['templatesDirectory']}</tt> is not writable.</p>";
+			echo $html;
+			return;
+		}
+		
+		# Get the list of templates or end
+		#!# Add support for nested directories
+		require_once ('directories.php');
+		if (!$templateFiles = directories::listFiles ($this->settings['templatesDirectory'], array ('tpl'), $directoryIsFromRoot =true)) {
+			$html .= "\n<p>There are no templates.</p>";
+			echo $html;
+			return;
+		}
+		
+		# Arrange the data as path => file
+		$templates = array ();
+		foreach ($templateFiles as $filename => $attributes) {
+			$name = $attributes['name'];	// Without extension, e.g. item.tpl will return item
+			$templates[$name] = $this->settings['templatesDirectory'] . $filename;
+		}
+		
+		# If a template has been selected for editing, end if not present in the registry of templates
+		if ($template) {
+			if (!isSet ($templates[$template])) {
+				$this->page404 ();
+				return false;
+			}
+		}
+		
+		# Create a listing if no template selected
+		if (!$template) {
+			$list = array ();
+			foreach ($templates as $name => $filename) {
+				$list[] = "<a href=\"{$name}.html\">{$name}</a>";
+			}
+			$html .= "\n<p>Click on a template below to edit it.</p>";
+			$html .= application::htmlUl ($list);
+			echo $html;
+			return;
+		}
+		
+		# Confirm the template file
+		$templateFile = $templates[$template];
+		
+		# Display a flash message if set
+		#!# Flash message support needs to be added to ultimateForm natively, as this is a common use-case
+		$successMessage = 'The template has been updated, and the previous version has been archived.';
+		if ($flashValue = application::getFlashMessage ('submission', $this->baseUrl . '/')) {
+			$message = "\n" . "<p>{$this->tick} <strong>" . $successMessage . '</strong></p>';
+			$html .= "\n<div class=\"graybox flashmessage\">" . $message . '</div>';
+		}
+		
+		# Create the form
+		$form = new form (array (
+			'formCompleteText' => false,
+			'reappear'	=> true,
+			'display' => 'paragraphs',
+			'autofocus' => true,
+			'unsavedDataProtection' => true,
+			'whiteSpaceTrimSurrounding' => false,
+		));
+		$form->heading ('', '<div class="graybox">');
+		$form->heading ('p', "Here you can edit the <em>{$template}</em> template.");
+		$form->heading ('p', 'The template language is <strong>Smarty</strong>. A <a href="http://www.smarty.net/docs/en/language.basic.syntax.tpl" target="_blank">basic syntax guide</a> and a <a href="http://www.smarty.net/docs/en/" target="_blank">full syntax reference guide</a> are available on the Smarty website.');
+		$form->heading ('', '</div>');
+		$form->textarea (array (
+			'name'		=> 'template',
+			'title'		=> 'Template',
+			'required'	=> true,
+			'rows'		=> 35,
+			'cols'		=> 115,
+			'default'	=> file_get_contents ($templateFile),
+			'wrap'		=> 'off',
+		));
+		
+		# Validate the parser syntax
+		if ($unfinalisedData = $form->getUnfinalisedData ()) {
+			if ($unfinalisedData['template']) {
+				try {
+					$this->templateHandle->fetch ('eval:'. $unfinalisedData['template']);
+				} catch (SmartyException $e) {
+					// var_dump ($e);
+					$form->registerProblem ('compilefailure', 'The template engine reported a syntax error on line ' . $e->line . ': <strong><tt>' . $e->desc . '</tt></strong>.');
+				}
+			}
+		}
+		
+		# Process the form
+		if (!$result = $form->process ($html)) {
+			echo $html;
+			return;
+		}
+		
+		# Archive the original file
+		$archiveFile = $templateFile . '.' . date ('Ymd-His') . '.' . $this->user;
+		rename ($templateFile, $archiveFile);
+		
+		# Save the new file
+		file_put_contents ($templateFile, $result['template']);
+		
+		# Set a flash message
+		$function = __FUNCTION__;
+		$redirectTo = "{$_SERVER['_SITE_URL']}{$this->baseUrl}/{$this->actions[$function]['url']}{$template}.html";
+		$redirectMessage = "\n{$this->tick}" . ' <strong>' . $successMessage . '</strong></p>';
+		application::setFlashMessage ('submission', '1', $redirectTo, $redirectMessage, $this->baseUrl . '/');
+		
+		# Confirm success, resetting the HTML, and show the submission
+		$html = application::sendHeader (302, $redirectTo, true);
+		
+		# Show the HTML
+		echo $html;
 	}
 	
 	
