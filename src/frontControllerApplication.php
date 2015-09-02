@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.9.0
+# Version 1.9.1
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -714,6 +714,7 @@ class frontControllerApplication
 			'dataDirectory'									=> '/data/',	// Where / represents the root of the repository containing user data files
 			'itemCaseSensitive'								=> false,	// Whether an $item value fed to an action is case-sensitive; if not, it is converted to lower-case
 			'corsDomains'									=> array (),	// Domains enabled for CORS headers
+			'importsSectionsMode'							=> false,	// Whether imports consist of a set of sections that all combine into one table and can be imported separately
 			'useTemplating'									=> false,	// Whether to enable templating
 			'templatesDirectory'							=> '%applicationRoot/app/views/',
 		);
@@ -1719,7 +1720,7 @@ class frontControllerApplication
 		$html .= "\n\t\t" . '<div class="graybox">';
 		$html .= "\n\t\t\t" . $fileCreationInstructionsHtml;
 		$html .= "\n\t\t" . '</div></li>';
-		$html .= "\n\t" . "<li><p><strong>Upload the export files</strong> to this website, using this form. Note that this can take several minutes, so please be patient.</p>";
+		$html .= "\n\t" . "<li><p><strong>Upload " . ($this->settings['importsSectionsMode'] ? 'each available export file' : 'the export files') . "</strong> to this website, using this form. Note that this can take several minutes, so please be patient.</p>";
 		$html .= $this->importUploadFilesForm ($expectedFiles);
 		$html .= "\n\t" . '</li>';
 		$html .= "\n\t" . '<li><p><strong>Run the import</strong> using the form below. This will reset the data in this system.</p>';
@@ -1758,6 +1759,7 @@ class frontControllerApplication
 			'requiredFieldIndicator' => false,
 			'submitButtonAccesskey' => false,
 		));
+		
 		$i = 0;
 		foreach ($expectedFiles as $basename => $filename) {
 			$form->upload (array (
@@ -1765,7 +1767,7 @@ class frontControllerApplication
 				'title'					=> $basename . ' file',
 				'directory'				=> $this->exportsDirectory,
 				// 'output'				=> array ('processing' => 'compiled'),
-				'required'				=> 1,
+				'required'				=> (!$this->settings['importsSectionsMode']),
 				'enableVersionControl'	=> true,
 				'forcedFileName'		=> pathinfo ($filename, PATHINFO_FILENAME),
 				'allowedExtensions'		=> array (pathinfo ($filename, PATHINFO_EXTENSION)),
@@ -1773,7 +1775,7 @@ class frontControllerApplication
 			));
 		}
 		
-		# Process the form, and show a message when done
+		# Process the form and confirm success
 		if ($result = $form->process ($html)) {
 			$html = "\n" . "<p>{$this->tick} The " . (count ($expectedFiles) == 1 ? 'file' : 'files') . ' should now be listed in the import box below.</p>';
 		}
@@ -1827,8 +1829,14 @@ class frontControllerApplication
 		
 		# Determine the chosen files
 		$files = array ();
-		foreach ($expectedFiles as $basename => $filename) {
-			$files[$basename] = $this->exportsDirectory . $basename . $result['date'] . '.' . $fileExtension;
+		if ($this->settings['importsSectionsMode']) {
+			preg_match ('/^(.+)([0-9]{8}\.(.+))$/', $result['date'], $matches);
+			$basename = $matches[1];
+			$files[$basename] = $this->exportsDirectory . $result['date'];
+		} else {
+			foreach ($expectedFiles as $basename => $filename) {
+				$files[$basename] = $this->exportsDirectory . $basename . $result['date'] . '.' . $fileExtension;
+			}
 		}
 		
 		# Write the lockfile
@@ -1871,16 +1879,28 @@ class frontControllerApplication
 			}
 		}
 		
-		# Filter to those having complete groups only, resulting in array(date=>dateString, date=>dateString, ...)
+		# Sort most-recent first
+		krsort ($groups);
+		
+		# In imports sections mode, keep grouped by date as a hierarchical select control, but in the visible string, show the date string and the type
 		$listing = array ();
-		foreach ($groups as $date => $files) {
-			if (!array_diff (array_keys ($expectedFiles), array_keys ($files))) {
-				$listing[$date] = $this->importDateString ($date);
+		if ($this->settings['importsSectionsMode']) {
+			foreach ($groups as $date => $files) {
+				$dateGroupLabel = $this->importDateString ($date);
+				asort ($files);
+				foreach ($files as $type => $file) {
+					$listing[$dateGroupLabel][$file] = $type . " ({$dateGroupLabel})";
+				}
+			}
+			
+		# Filter to those having complete groups only, resulting in array(date=>dateString, date=>dateString, ...)
+		} else {
+			foreach ($groups as $date => $files) {
+				if (!array_diff (array_keys ($expectedFiles), array_keys ($files))) {
+					$listing[$date] = $this->importDateString ($date);
+				}
 			}
 		}
-		
-		# Reverse the order to be most-recent first
-		krsort ($listing);
 		
 		# Return the file path
 		return $listing;
@@ -1902,9 +1922,13 @@ class frontControllerApplication
 	# Function to create the run import form
 	private function importRunForm ($exportFiles, $importTypes, &$html)
 	{
-		# Determine the most recent file
-		$exportFilesKeys = array_keys ($exportFiles);
-		$mostRecent = reset ($exportFilesKeys);
+		# Determine the most recent file if required
+		if ($this->settings['importsSectionsMode']) {
+			$mostRecent = false;
+		} else {
+			$exportFilesKeys = array_keys ($exportFiles);
+			$mostRecent = reset ($exportFilesKeys);
+		}
 		
 		# Create the form
 		$form = new form (array (
@@ -1914,7 +1938,7 @@ class frontControllerApplication
 		));
 		$form->select (array ( 
 		    'name'		=> 'date', 
-		    'title'		=> 'Select export files dated', 
+		    'title'		=> ($this->settings['importsSectionsMode'] ? 'Select export file' : 'Select export files dated'),
 		    'values'	=> $exportFiles,
 		    'required'	=> true,
 			'default'	=> $mostRecent,
