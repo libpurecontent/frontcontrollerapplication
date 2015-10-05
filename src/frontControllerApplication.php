@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.9.1
+# Version 1.9.2
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -382,8 +382,11 @@ class frontControllerApplication
 			}
 		}
 		
-		# Determine the application directory
-		$reflector = new ReflectionClass (get_class ($this));
+		# Determine the application directory; see: http://stackoverflow.com/questions/32937389/
+		$classHierarchy = array_reverse (array_values (class_parents ($this)));		// Classes in order, starting with frontControllerApplication, but not including the last in the chain
+		$classHierarchy[] = get_class ($this);		// The last in the chain
+		$mainApplicationClass = $classHierarchy[1];		// i.e. the direct child of frontControllerApplication
+		$reflector = new ReflectionClass ($mainApplicationClass);
 		$this->applicationRoot = dirname ($reflector->getFileName ());
 		
 		# Load any stylesheet if supplied
@@ -2649,6 +2652,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 	# Admin editing section, substantially delegated to the sinenomine editing component
 	# Needs adding to httpd.conf, where $applicationBaseUrl is not slash-terminated
 	#	Use MacroSinenomineEmbeddedWholeDb "$applicationBaseUrl" "/data" "editing"
+	#!# Need to add support for 'allow' to make easier to allow only specific tables
 	public function editing ($attributes = array (), $deny = false /* or supply an array */)
 	{
 		# If there are no deny table entries, and an array (empty/full) has not been supplied, deny the administrators table by default
@@ -2793,15 +2797,20 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 	
 	
 	# Function to provide templatisation
-	public function templatise ()
+	public function templatise ($templateFile = false /* Normally assigned automatically based on the action */)
 	{
 		# Assign each provided placeholder
 		foreach ($this->template as $placeholder => $fragmentHtml) {
 			$this->templateHandle->assign ($placeholder, $fragmentHtml);
 		}
 		
+		# Default to the action's template
+		if (!$templateFile) {
+			$templateFile = $this->action . '.tpl';
+		}
+		
 		# Compile the HTML
-		$html = $this->templateHandle->fetch ($this->action . '.tpl');
+		$html = $this->templateHandle->fetch ($templateFile);
 		
 		# Return the HTML
 		return $html;
