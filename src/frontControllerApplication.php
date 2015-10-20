@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.9.2
+# Version 1.9.3
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -1033,7 +1033,7 @@ class frontControllerApplication
 		
 		# Compile the HTML, adding a heading
 		$html  = "\n<h4 id=\"tabsheading\">" . (isSet ($this->actions[$parent]['subheading']) ? $this->actions[$parent]['subheading'] : $this->actions[$parent]['description']) . '</h4>';
-		$html .= $this->actionsListHtml ($actions, $useDescriptionAsText = false, 'tabs subtabs', $current);
+		$html .= $this->actionsListHtml ($actions, $useDescriptionAsText = false, $this->settings['tabUlClass'] . ' subtabs', $current);
 		
 		# Return the HTML
 		return $html;
@@ -1690,6 +1690,37 @@ class frontControllerApplication
 	}
 	
 	
+	# Function to provide an 'Are you sure?' form
+	public function areYouSure ($message, $confirmation, &$html)
+	{
+		# Start the HTML
+		$html = '';
+		
+		# Create the form
+		require_once ('ultimateForm.php');
+		$form = new form (array (
+			'formCompleteText' => false,
+			'nullText' => false,
+			'div' => 'graybox',
+			'displayRestrictions' => false,
+			'requiredFieldIndicator' => false,
+		));
+		$form->heading ('p', $message);
+		$form->checkboxes (array (
+			'name'				=> 'confirmation',
+			'title'				=> 'Confirm',
+			'values'			=> array ($confirmation),
+			'required'			=> true,	// Ensures that a submission must be ticked for the form to be successful
+		));
+		
+		# Process the form
+		$result = $form->process ($html);
+		
+		# Return status
+		return $result;
+	}
+	
+	
 	# Function to provide a general-purpose importing user interface
 	public function importUi ($baseFilenames, $importTypes = array ('full' => 'FULL import'), $fileCreationInstructionsHtml, $fileExtension = 'xml')
 	{
@@ -1735,7 +1766,7 @@ class frontControllerApplication
 		if ($done) {
 			$finishTime = time ();
 			$seconds = $finishTime - $startTime;
-			$html .= "\n<p>The import took: {$seconds} seconds.</p>";
+			$html .= "\n<p>The import took: " . number_format ($seconds) . ' seconds.</p>';
 		}
 		
 		# Show the HTML
