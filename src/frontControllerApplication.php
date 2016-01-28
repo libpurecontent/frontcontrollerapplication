@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.9.3
+# Version 1.9.4
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -27,7 +27,8 @@ class frontControllerApplication
 		'profile' => array (
 			'description' => 'Update your profile',
 			'url' => 'profile/',
-			'tab' => '<img src="/images/icons/user.png" alt="" class="icon" /> My profile',
+			'tab' => 'My profile',
+			'icon' => 'user',
 			'authentication' => true,
 		),
 		'feedback' => array (
@@ -38,7 +39,8 @@ class frontControllerApplication
 		'editing' => array (
 			'description' => false,
 			'url' => 'data/',
-			'tab' => '<img src="/images/icons/pencil.png" alt="" class="icon" /> Data editing',
+			'tab' => 'Data editing',
+			'icon' => 'pencil',
 			'administrator' => true,
 		),
 		'admin' => array (
@@ -179,6 +181,13 @@ class frontControllerApplication
 		$this->baseUrl = application::getBaseUrl ();
 		$this->imageStoreRoot = $_SERVER['DOCUMENT_ROOT'] . $this->baseUrl . '/images/';
 		
+		# Determine the application directory; see: http://stackoverflow.com/questions/32937389/
+		$classHierarchy = array_reverse (array_values (class_parents ($this)));		// Classes in order, starting with frontControllerApplication, but not including the last in the chain
+		$classHierarchy[] = get_class ($this);		// The last in the chain
+		$mainApplicationClass = $classHierarchy[1];		// i.e. the direct child of frontControllerApplication
+		$reflector = new ReflectionClass ($mainApplicationClass);
+		$this->applicationRoot = dirname ($reflector->getFileName ());
+		
 		# Obtain the defaults
 		$this->defaults = $this->assignDefaults ($settings);
 		
@@ -229,7 +238,7 @@ class frontControllerApplication
 		$houseStyleParts = array ('header', 'footer');
 		foreach ($houseStyleParts as $houseStylePart) {
 			${$houseStylePart} = false;     // i.e. create $header and $footer
-			if ($this->settings[$houseStylePart . 'Location']) {
+			if ($this->settings[$houseStylePart . 'Location']) {	// i.e. headerLocation and footerLocation
 				$file = $_SERVER['DOCUMENT_ROOT'] . $this->settings[$houseStylePart . 'Location'];
 				if (is_readable ($file)) {
 					${$houseStylePart} = file_get_contents ($file);
@@ -381,13 +390,6 @@ class frontControllerApplication
 				echo "\n\n\n<!-- jQuery -->\n" . '<script type="text/javascript" src="//code.jquery.com/jquery.min.js"></script>' . "\n\n";
 			}
 		}
-		
-		# Determine the application directory; see: http://stackoverflow.com/questions/32937389/
-		$classHierarchy = array_reverse (array_values (class_parents ($this)));		// Classes in order, starting with frontControllerApplication, but not including the last in the chain
-		$classHierarchy[] = get_class ($this);		// The last in the chain
-		$mainApplicationClass = $classHierarchy[1];		// i.e. the direct child of frontControllerApplication
-		$reflector = new ReflectionClass ($mainApplicationClass);
-		$this->applicationRoot = dirname ($reflector->getFileName ());
 		
 		# Load any stylesheet if supplied
 		if (!$this->exportType) {
@@ -2026,7 +2028,7 @@ class frontControllerApplication
 			$now = time ();
 			$maximumPeriod = $detectStaleLockfileHours * 60 * 60;
 			if (($now - $startTime) > $maximumPeriod) {
-				$adminMessage = "A stale lockfile, created at {$timestamp}, was detected.";
+				$adminMessage = "A stale lockfile, created at {$timestamp}, was detected.\n\n{$this->lockfile}";
 				$this->reportError ($adminMessage, $publicMessage = false);
 			}
 		}
@@ -2311,10 +2313,11 @@ class frontControllerApplication
 	
 	
 	# Feedback form
-	function feedback ()
+	#!# This is a poor API
+	public function feedback ($id_ignored = NULL, $error_ignored = NULL, $echoHtml = true)
 	{
-		# Show the form
-		echo "<p>We welcome your feedback on this facility. If you have any suggestions, questions or comments - whether positive or negative - we'd like to hear from you. Please use the form below to send us your feedback.</p>";
+		# Start the HTML
+		$html = "<p>We welcome your feedback on this facility. If you have any suggestions, questions or comments - whether positive or negative - we'd like to hear from you. Please use the form below to send us your feedback.</p>";
 		
 		# Create a new form
 		$form = new form (array (
@@ -2360,7 +2363,15 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		$form->setOutputScreen ();
 		
 		# Process the form
-		$result = $form->process ();
+		$result = $form->process ($html);
+		
+		# Show the HTML if required
+		if ($echoHtml) {
+			echo $html;
+		}
+		
+		# Return the HTML
+		return $html;
 	}
 	
 	
