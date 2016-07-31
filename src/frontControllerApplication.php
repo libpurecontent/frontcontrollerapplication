@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.9.4
+# Version 1.9.5
 class frontControllerApplication
 {
  	# Define available actions; these should be extended by adding definitions in an overriden assignActions ()
@@ -691,6 +691,7 @@ class frontControllerApplication
 			'ravenGetPasswordUrl'							=> 'https://jackdaw.cam.ac.uk/get-raven-password/',
 			'ravenResetPasswordUrl'							=> 'https://jackdaw.cam.ac.uk/get-raven-password/',
 			'ravenCentralLogoutUrl'							=> 'https://raven.cam.ac.uk/auth/logout.html',
+			'authFileGroup'									=> false,		// Whether to write an auth file containing the administrators, and if so, what group name (or true, which will allocate 'administrators')
 			'page404'										=> 'sitetech/404.html',	// Or false to use internal handler
 			'useAdmin'										=> true,
 			'revealAdminFunctions'							=> false,	// Whether to show admins-only tabs etc to non-administrators
@@ -2569,6 +2570,9 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 			$message = "\nDear {$result['forename']},\n\nI have given you administrative rights for this facility.\n\nYou can log in using the following credentials:\n\nLogin at:    {$_SERVER['_SITE_URL']}{$this->baseUrl}/\nLogin type:  {$authSystemName} login\nUsername:    {$result[$usernameField]}\nPassword:    {$result['password']}\n\n\nPlease let me know if you have any questions.";
 			application::utf8Mail ($result['email'], $applicationName, wordwrap ($message), "From: {$this->userEmail}");
 			$html .= "\n<p class=\"success\">An e-mail giving the login details has been sent to the new user.</p>";
+			
+			# Rewrite the auth file
+			$this->rewriteAuthFile (array_keys ($this->administrators));
 		}
 		
 		# Return the HTML
@@ -2610,6 +2614,10 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 				if ($this->databaseConnection->delete ($this->settings['database'], $this->settings['administrators'], array ($usernameField => $result[$usernameField]))) {
 					$html .= "\n<p>" . htmlspecialchars ($result[$usernameField]) . " is no longer as an administrator. <a href=\"\">Reset page.</a></p>";
 					$this->administrators = $this->getAdministrators ();
+					
+					# Rewrite the auth file
+					$this->rewriteAuthFile (array_keys ($this->administrators));
+					
 				} else {
 					$html .= "\n<p class=\"warning\">There was a problem deleting the administrator. (Probably 'delete' privileges are not enabled for this table. Please contact the main administrator of the system.</p>";
 				}
@@ -2619,6 +2627,36 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		
 		# Return the HTML
 		return $html;
+	}
+	
+	
+	# Function to rewrite the auth file
+	private function rewriteAuthFile ($administrators)
+	{
+		# End if not required
+		if (!$this->settings['authFileGroup']) {return;}
+		
+		# Determine the group name
+		if ($this->settings['authFileGroup'] === true) {
+			$this->settings['authFileGroup'] = 'administrators';
+		}
+		
+		# Add any additional users to the administrators list
+		#!# Changes to the list will only take effect when a full admin is added/removed
+		if (isSet ($this->authFileGroupAdditionalUsers)) {
+			$administrators = array_merge ($administrators, $this->authFileGroupAdditionalUsers);
+			$administrators = array_unique ($administrators);
+		}
+		
+		# Determine the filename
+		$filename = $_SERVER['DOCUMENT_ROOT'] . $this->baseUrl . '/.ht-users';
+		
+		# Assemble the file contents
+		$groupAuth = $this->settings['authFileGroup'] . ': ' . implode (' ', $administrators);
+		
+		# Write the file, replacing whatever is there currently
+		#!# Error handling needed
+		file_put_contents ($filename, $groupAuth);
 	}
 	
 	
