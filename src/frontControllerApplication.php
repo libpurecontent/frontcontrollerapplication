@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.9.6
+# Version 1.9.7
 class frontControllerApplication
 {
 	# Define global defaults
@@ -89,6 +89,7 @@ class frontControllerApplication
 			'itemCaseSensitive'								=> false,	// Whether an $item value fed to an action is case-sensitive; if not, it is converted to lower-case
 			'corsDomains'									=> array (),	// Domains enabled for CORS headers
 			'importsSectionsMode'							=> false,	// Whether imports consist of a set of sections that all combine into one table and can be imported separately
+			'importLog'										=> false,	// Import log file (false or filename; %applicationRoot is supported), which will create importlog.txt in baseUrl
 			'useTemplating'									=> false,	// Whether to enable templating
 			'templatesDirectory'							=> '%applicationRoot/app/views/',
 		);
@@ -267,7 +268,7 @@ class frontControllerApplication
 		$this->baseUrl = application::getBaseUrl ();
 		$this->imageStoreRoot = $_SERVER['DOCUMENT_ROOT'] . $this->baseUrl . '/images/';
 		
-		# Determine the application directory; see: http://stackoverflow.com/questions/32937389/
+		# Determine the application (repository) directory; see: http://stackoverflow.com/questions/32937389/
 		$classHierarchy = array_reverse (array_values (class_parents ($this)));		// Classes in order, starting with frontControllerApplication, but not including the last in the chain
 		$classHierarchy[] = get_class ($this);		// The last in the chain
 		$mainApplicationClass = $classHierarchy[1];		// i.e. the direct child of frontControllerApplication
@@ -328,6 +329,12 @@ class frontControllerApplication
 		
 		# Set a lockfile location
 		$this->lockfile = $_SERVER['DOCUMENT_ROOT'] . $this->baseUrl . '/lockfile.txt';
+		
+		# Set import log location if enabled
+		$this->importLog = false;
+		if (is_string ($this->settings['importLog'])) {
+			$this->importLog = str_replace ('%applicationRoot', $this->applicationRoot, $this->settings['importLog']);
+		}
 		
 		# Define the data URL, e.g. for use with ultimateForm::<widget>::autocomplete
 		$this->dataUrl = "{$_SERVER['_SITE_URL']}{$this->baseUrl}/data.html";
@@ -887,7 +894,7 @@ class frontControllerApplication
 			}
 			
 			# Disable (remove) an action if required; this is basically a convenience flag to avoid having to do unset() after an array definition
-			if (isSet ($attributes['enableIf'])) {
+			if (array_key_exists ('enableIf', $attributes)) {	// array_key_exists used, to enable NULL to be considered false
 				if (!$attributes['enableIf']) {
 					unset ($this->actions[$action]);
 					if ($this->action == $action) {$this->action = 'home';}
@@ -1777,9 +1784,6 @@ class frontControllerApplication
 			return;
 		}
 		
-		# Start a timer
-		$startTime = time ();
-		
 		# Determine the dated filenames for each expected files
 		$today = date ('Ymd');
 		$expectedFiles = array ();
@@ -1798,19 +1802,38 @@ class frontControllerApplication
 		$html .= $this->importUploadFilesForm ($expectedFiles);
 		$html .= "\n\t" . '</li>';
 		$html .= "\n\t" . '<li><p><strong>Run the import</strong> using the form below. This will reset the data in this system.</p>';
-		$html .= $this->importControl ($expectedFiles, $importTypes, $fileExtension, $done);
+		$html .= "\n\t\t" . '<div class="graybox">';
+		$html .= $this->importControl ($expectedFiles, $importTypes, $fileExtension);
+		$html .= "\n\t\t" . '</div></li>';
 		$html .= "\n\t" . '</li>';
 		$html .= "\n" . '</ol>';
 		
-		# Show how long the import took
-		if ($done) {
-			$finishTime = time ();
-			$seconds = $finishTime - $startTime;
-			$html .= "\n<p>The import took: " . number_format ($seconds) . ' seconds.</p>';
-		}
+		# Show log file if present
+		$html .= $this->importLogHtml ();
 		
 		# Show the HTML
 		echo $html;
+	}
+	
+	
+	# Function to show the import log
+	public function importLogHtml ($title = 'Import log')
+	{
+		# End if no import logging
+		if (!$this->importLog) {return false;}
+		
+		# End if no file
+		if (!is_file ($this->importLog)) {return false;}
+		
+		# Assemble the HTML
+		$html  = "\n<hr />";
+		$html .= "\n<h3>{$title}:</h3>";
+		$html .= "\n<pre>";
+		$html .= file_get_contents ($this->importLog);
+		$html .= "\n</pre>";
+		
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -1863,7 +1886,7 @@ class frontControllerApplication
 	
 	
 	# Function to control the actual import
-	private function importControl ($expectedFiles, $importTypes, $fileExtension, &$done = false)
+	private function importControl ($expectedFiles, $importTypes, $fileExtension)
 	{
 		# Start the HTML
 		$html = '';
@@ -1916,8 +1939,33 @@ class frontControllerApplication
 		# Write the lockfile
 		file_put_contents ($this->lockfile, $result['importtype'] . ' ' . $_SERVER['REMOTE_USER'] . ' ' . date ('Y-m-d H:i:s'));
 		
+		# Start a timer
+		$startTime = time ();
+		
+		# Start the log
+		$this->logger ("Starting {$result['importtype']} import (started by {$this->user})", $reset = true);
+		
 		# Run the import
 		$done = $this->doImport ($files, $result['importtype'], $html);
+		
+		# Determine duration
+		$finishTime = time ();
+		$seconds = $finishTime - $startTime;
+		if ($seconds > (60*60)) {
+			$duration = round (($seconds / (60*60)), 2) . ' hours';
+		} else if ($seconds > 60) {
+			$duration = round (($seconds / 60), 1) . ' minutes';
+		} else {
+			$duration = round ($seconds, 1) . ' seconds';
+		}
+		
+		# Show how long the import took
+		if ($done) {
+			$html .= "\n<p>{$this->tick} The import took: " . $duration . '.</p>';
+		}
+		
+		# Log end
+		$this->logger ("Import finished (took {$duration})");
 		
 		# Remove the lockfile
 		unlink ($this->lockfile);
@@ -1946,7 +1994,8 @@ class frontControllerApplication
 		# Group by date
 		$groups = array ();
 		foreach ($files as $filename => $attributes) {
-			if (preg_match ('/^([a-z]+)([0-9]{8}).([a-z]+)$/', $filename, $matches)) {
+			#!# $expectedFiles currently assumed not to have special preg characters
+			if (preg_match ('/^(' . implode ('|', array_keys ($expectedFiles)) . ')([0-9]{8}).([a-z]+)$/', $filename, $matches)) {
 				$date = $matches[2];
 				$type = $matches[1];
 				$groups[$date][$type] = $filename;
@@ -2007,7 +2056,7 @@ class frontControllerApplication
 		# Create the form
 		$form = new form (array (
 			'submitButtonText' => 'Begin import!',
-			'div' => 'graybox',
+			'div' => 'ultimateform horizontalonly',
 			'name' => 'import',
 		));
 		$form->select (array ( 
@@ -2199,6 +2248,66 @@ class frontControllerApplication
 		$html .= "\n<p>IMPORTANT NOTE: This does not include changes manually to the database directly (e.g. using PhpMyAdmin) - it only covers changes submitted via the webforms in this system itself.</p>";
 		$html .= "\n</div>";
 		$html .= "\n" . implode ("\n\n", $changesHtml);
+		
+		# Show the HTML
+		echo $html;
+	}
+	
+	
+	# Function to provide a logger
+	public function logger ($message, $reset = false)
+	{
+		# End if import log not enabled
+		if (!$this->importLog) {return;}
+		
+		# Construct the string
+		$string = date ('Y-m-d H:i:s') . ': ' . $message . "\r\n";
+		
+		# Append to the logfile (or start fresh if resetting)
+		file_put_contents ($this->importLog, $string, ($reset ? 0 : FILE_APPEND));
+	}
+	
+	
+	# Function to enable memory profiling; see: https://github.com/arnaud-lb/php-memory-profiler
+	public function profileMemoryStart ()
+	{
+		# End if not enabled
+		if (!function_exists ('memprof_enable')) {return false;}
+		
+		# Enable memory profiling
+		memprof_enable ();
+	}
+	
+	
+	# Function to enable memory profiling
+	public function profileMemoryEnd ($filenameBase = 'memory.heap' /* from baseUrl; will also have image file extension added after */)
+	{
+		# Available only to admins
+		if (!$this->userIsAdministrator) {return false;}
+		
+		# End if not enabled
+		if (!function_exists ('memprof_dump_pprof')) {return false;}
+		
+		# Create the memory dump
+	    $time = microtime (true);
+		$location = $this->baseUrl . '/' . $filenameBase;
+		$file = $_SERVER['DOCUMENT_ROOT'] . $location;
+	    $fh = fopen ($file, 'w');
+	    memprof_dump_pprof ($fh);
+	    fclose ($fh);
+		
+		# Create an image; see: http://stackoverflow.com/questions/13699297/how-to-use-pprof-in-go-program
+		$imageLocation = $location . '.gif';
+		$image = $_SERVER['DOCUMENT_ROOT'] . $imageLocation;
+		$command = "google-pprof --gif {$file} | cat > {$image}";
+		shell_exec ($command);
+		
+		# Remove the raw memory dump file
+		unlink ($file);
+	    
+		# Construct an HTML image tag, linking to the documentation
+		$html  = "\n<h3>Memory usage:</h3>";
+		$html .= "\n<a href=\"https://gperftools.github.io/gperftools/heapprofile.html\" target=\"_blank\"><img src=\"{$imageLocation}\"></a>";
 		
 		# Show the HTML
 		echo $html;
