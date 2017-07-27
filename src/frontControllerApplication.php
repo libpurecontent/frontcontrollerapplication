@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.9.7
+# Version 1.9.8
 class frontControllerApplication
 {
 	# Define global defaults
@@ -26,6 +26,7 @@ class frontControllerApplication
 			'h1'											=> false,		// NB an empty string will remove <h1>..</h1> altogether
 			'headerLocation'								=> false,		// GUI header, if local loading needed
 			'footerLocation'								=> false,		// GUI footer, if local loading needed
+			'guiLocationAbsolute'							=> false,
 			'headerLogo'									=> false,		// Image for a header instead of the application name
 			'useDatabase'									=> true,
 			'credentials'									=> false,	// Filename of credentials file, which results in hostname/username/password/database being ignored
@@ -86,7 +87,7 @@ class frontControllerApplication
 			'apiUsername'									=> false,	// HTTP username required for API calls
 			'applicationStylesheet'							=> '/styles.css',	// Where / represents the root of the repository containing the application
 			'dataDirectory'									=> '/data/',	// Where / represents the root of the repository containing user data files
-			'itemCaseSensitive'								=> false,	// Whether an $item value fed to an action is case-sensitive; if not, it is converted to lower-case
+			'itemCaseSensitive'								=> false,	// Whether an $item value fed to an action is case-sensitive; if not, it is converted to lower-case; #!# In future this will default to true
 			'corsDomains'									=> array (),	// Domains enabled for CORS headers
 			'importsSectionsMode'							=> false,	// Whether imports consist of a set of sections that all combine into one table and can be imported separately
 			'importLog'										=> false,	// Import log file (false or filename; %applicationRoot is supported), which will create importlog.txt in baseUrl
@@ -317,7 +318,7 @@ class frontControllerApplication
 		foreach ($houseStyleParts as $houseStylePart) {
 			${$houseStylePart} = false;     // i.e. create $header and $footer
 			if ($this->settings[$houseStylePart . 'Location']) {	// i.e. headerLocation and footerLocation
-				$file = $_SERVER['DOCUMENT_ROOT'] . $this->settings[$houseStylePart . 'Location'];
+				$file = ($this->settings['guiLocationAbsolute'] ? '' : $_SERVER['DOCUMENT_ROOT']) . $this->settings[$houseStylePart . 'Location'];
 				if (is_readable ($file)) {
 					${$houseStylePart} = file_get_contents ($file);
 				}
@@ -1634,16 +1635,21 @@ class frontControllerApplication
 			return false;
 		}
 		
-		# Obtain the HTTP-supplied username and validate it
-		if (!$httpAuthUsername = $this->requestHttpAuthUsername ()) {
-			$error = 'A HTTP-supplied username has not been supplied.';	// Probably will never be shown, as a dialog box should be shown instead
-			return false;
-		}
-		
-		# Check the username matches
-		if ($httpAuthUsername != $this->settings['apiUsername']) {
-			$error = "The HTTP-supplied username ({$httpAuthUsername}) is not correct.";
-			return false;
+		# Determine if access is open
+		$openAccess = ($this->settings['apiUsername'] === true);
+		if (!$openAccess) {
+			
+			# Obtain the HTTP-supplied username and validate it
+			if (!$httpAuthUsername = $this->requestHttpAuthUsername ()) {
+				$error = 'A HTTP-supplied username has not been supplied.';	// Probably will never be shown, as a dialog box should be shown instead
+				return false;
+			}
+			
+			# Check the username matches
+			if ($httpAuthUsername != $this->settings['apiUsername']) {
+				$error = "The HTTP-supplied username ({$httpAuthUsername}) is not correct.";
+				return false;
+			}
 		}
 		
 		# Ensure a method is supplied
@@ -2896,7 +2902,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 	# Needs adding to httpd.conf, where $applicationBaseUrl is not slash-terminated
 	#	Use MacroSinenomineEmbeddedWholeDb "$applicationBaseUrl" "/data" "editing"
 	#!# Need to add support for 'allow' to make easier to allow only specific tables
-	public function editing ($attributes = array (), $deny = false /* or supply an array */)
+	public function editing ($attributes = array (), $deny = false /* or supply an array */, $sinenomineExtraSettings = array ())
 	{
 		# If there are no deny table entries, and an array (empty/full) has not been supplied, deny the administrators table by default
 		if (!$deny && !is_array ($deny)) {
@@ -2913,7 +2919,6 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		$administratorUsernameField = $this->administratorUsernameField ();
 		
 		# Define the settings
-		#!# Need ability to pass in other flags, e.g. direction=desc
 		$settings = array (
 			'database' => $this->settings['database'],
 			'table' => false,
@@ -2935,6 +2940,9 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 			'denyAdministratorOverride' => false,
 			'tableCommentsInSelectionList' => true,
 		);
+		
+		# Merge in other settings, with the supplied values taking priority
+		$settings = array_merge ($settings, $sinenomineExtraSettings);
 		
 		# Load and run the database editing
 		require_once ('sinenomine.php');
