@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.9.8
+# Version 1.9.9
 class frontControllerApplication
 {
 	# Define global defaults
@@ -85,6 +85,7 @@ class frontControllerApplication
 			'editingPagination'								=> 250,		// Pagination when editing the embedded record editor
 			'cronUsername'									=> false,	// HTTP username required for cron jobs
 			'apiUsername'									=> false,	// HTTP username required for API calls
+			'apiJsonPretty'									=> true,	// Whether to use pretty printing for JSON output
 			'applicationStylesheet'							=> '/styles.css',	// Where / represents the root of the repository containing the application
 			'dataDirectory'									=> '/data/',	// Where / represents the root of the repository containing user data files
 			'itemCaseSensitive'								=> false,	// Whether an $item value fed to an action is case-sensitive; if not, it is converted to lower-case; #!# In future this will default to true
@@ -1622,7 +1623,11 @@ class frontControllerApplication
 		
 		# Send the data
 		header ('Content-type: application/json; charset=UTF-8');
-		echo json_encode ($data, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);	// Enable pretty-print; see: http://www.vinaysahni.com/best-practices-for-a-pragmatic-restful-api#pretty-print-gzip
+		$flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
+		if ($this->settings['apiJsonPretty']) {
+			$flags = JSON_PRETTY_PRINT | $flags;
+		}
+		echo json_encode ($data, $flags);	// Enable pretty-print; see: http://www.vinaysahni.com/best-practices-for-a-pragmatic-restful-api#pretty-print-gzip
 	}
 	
 	
@@ -3013,6 +3018,75 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		
 		# Return the HTML
 		return $html;
+	}
+	
+	
+	# Function to create filtering controls
+	public function filteringControls ($fields, $path, &$html = '')
+	{
+		# Redirect to clear non-submitted values, to keep the URLs as simple as possible
+		#!# This would be useful to have in ultimateForm natively, as that would remove the need to specify external GET fields (action/runpage)
+		$get = $_GET;
+		unset ($get['action']);
+		unset ($get['item']);
+		$redirect = false;
+		foreach ($get as $key => $value) {
+			if (!strlen ($value)) {
+				unset ($get[$key]);
+				$redirect = true;
+			}
+		}
+		if ($redirect) {
+			$url = $_SERVER['_SITE_URL'] . $path . ($get ? '?' . http_build_query ($get) : '');
+			$html = application::sendHeader (302, $url, true);
+			return $html;
+		}
+		
+		# Create a form
+		require_once ('ultimateForm.php');
+		$form = new form (array (
+			'formCompleteText' => false,
+			'div' => 'ultimateform graybox',
+			'id' => 'filters',
+			'display' => 'template',
+			'displayTemplate' => "{[[PROBLEMS]]} <p>Filter to only: &nbsp; {" . implode ('} &nbsp;{', array_keys ($fields)) . "} &nbsp;{[[SUBMIT]]} &nbsp; <span class=\"clear\">or <a href=\"{$path}\">clear filters</a></span></p>",
+			'name' => false,
+			'get' => true,
+			'reappear' => true,
+			'submitButtonAccesskey' => false,
+			'submitButtonText' => 'Apply filters',
+			'requiredFieldIndicator' => false,
+			'nullText' => false,
+			'autosubmit' => true,
+		));
+		foreach ($fields as $fieldname => $field) {
+			$field['name'] = $fieldname;
+			if (!isSet ($field['placeholder'])) {
+				$field['placeholder'] = $field['title'];
+			}
+			if (isSet ($field['values'])) {
+				$field['nullText'] = $field['title'];
+				$form->select ($field);
+			} else {
+				$form->search ($field);
+			}
+		}
+		$form->process ($html);
+		
+		# Determine the filters, giving a result suitable for use in a WHERE clause
+		$conditions = application::arrayFields ($get, array_keys ($fields));
+		
+		# Convert conditions to LIKE %...%
+		foreach ($conditions as $field => $value) {
+			if (isSet ($fields[$field]['like']) && $fields[$field]['like']) {
+				if (strlen ($value)) {
+					$conditions[$field] = '%' . $value . '%';
+				}
+			}
+		}
+		
+		# Return the filter result
+		return $conditions;
 	}
 	
 	
