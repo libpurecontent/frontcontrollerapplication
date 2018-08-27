@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.9.9
+# Version 1.9.10
 class frontControllerApplication
 {
 	# Define global defaults
@@ -52,6 +52,7 @@ class frontControllerApplication
 			'webmaster'										=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
 			'administratorEmail'							=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
 			'webmasterContactAddress'						=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
+			#!# Needs to be specifiable as string "a, b", so that multiple e-mail addresses from a database table can all be in the To: field; currently array can be specified, but that becomes To,cc[,cc...]
 			'feedbackRecipient'								=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),	#!# This ought to be the value of administratorEmail by default
 			'useCamUniLookup'								=> true,
 			'directoryIndex'								=> 'index.html',					# The directory index, used for local file retrieval
@@ -94,6 +95,7 @@ class frontControllerApplication
 			'importLog'										=> false,	// Import log file (false or filename; %applicationRoot is supported), which will create importlog.txt in baseUrl
 			'useTemplating'									=> false,	// Whether to enable templating
 			'templatesDirectory'							=> '%applicationRoot/app/views/',
+			'exportsDirectory'								=> '%applicationRoot/exports/',
 		);
 	}
 	
@@ -394,9 +396,11 @@ class frontControllerApplication
 		
 		# Deal with internal auth (often not used)
 		$this->userVisibleIdentifier = $this->user;
+		$this->userEmail = false;
 		if ($this->settings['internalAuth']) {
 			$this->loadInternalAuth ();
 			$this->user = $this->internalAuthClass->getUserId ();
+			$this->userEmail = $this->internalAuthClass->getUserEmail ();
 			$this->userVisibleIdentifier = $this->internalAuthClass->getUserEmail ();
 			#!# This appears above the tabs
 			echo $this->internalAuthClass->getHtml ();	// Basically will only appear if the user gets logged out for security reasons
@@ -430,6 +434,9 @@ class frontControllerApplication
 			$this->restrictedAdministrator = ((isSet ($this->administrators[$this->user]['privilege']) && ($this->administrators[$this->user]['privilege'] == 'Restricted administrator')) ? true : NULL);
 		}
 		
+		# Assign the item (basically to deal with the common scenario of a function needing an ID parameter
+		$this->item = (isSet ($_GET['item']) ? ($this->settings['itemCaseSensitive'] ? $_GET['item'] : strtolower ($_GET['item'])) : false);
+		
 		# Additional processing, before actions processing phase, if required
 		if (method_exists ($this, 'mainPreActions')) {
 			if ($this->mainPreActions () === false) {
@@ -454,9 +461,6 @@ class frontControllerApplication
 			}
 		}
 */
-		
-		# Assign the item (basically to deal with the common scenario of a function needing an ID parameter
-		$this->item = (isSet ($_GET['item']) ? ($this->settings['itemCaseSensitive'] ? $_GET['item'] : strtolower ($_GET['item'])) : false);
 		
 		# Compatibility fix to pump a script-supplied argument into the query string
 		if (isSet ($_SERVER['argv']) && isSet ($_SERVER['argv'][1]) && preg_match ('/^action=/', $_SERVER['argv'][1])) {
@@ -599,7 +603,7 @@ class frontControllerApplication
 			if ($this->settings['apiUsername']) {$pagesNeverRequiringAuthentication[] = 'api';}
 			if (!in_array ($this->action, $pagesNeverRequiringAuthentication)) {
 				if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
-				$loginTextLink = "<a href=\"{$loginUrl}?{$location}\">log in (using Raven)</a>";
+				$loginTextLink = "<a href=\"{$loginUrl}?{$location}\" tabindex=\"1\">log in (using Raven)</a>";
 				if ($this->settings['externalAuth']) {$loginTextLink = "log in using [<a href=\"{$loginUrl}?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]";}
 				if ($this->settings['internalAuth']) {$loginTextLink = "<a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\">log in</a> (or <a href=\"{$this->baseUrl}/{$this->actions['register']['url']}\">create an account</a>)";}
 				echo "\n<p><strong>Please " . $loginTextLink . " so that you can " . ($this->actions[$this->action]['description'] ? htmlspecialchars (strtolower (strip_tags ($this->actions[$this->action]['description']))) : 'use this facility') . '.</strong></p>';
@@ -656,7 +660,6 @@ class frontControllerApplication
 		
 		# Get the user's details
 		$this->userName = false;
-		$this->userEmail = false;
 		$this->userPhone = false;
 		if ($this->settings['useCamUniLookup']) {
 			if ($this->user) {
@@ -1248,7 +1251,10 @@ class frontControllerApplication
 		
 		# Allocate their e-mail addresses
 		foreach ($administrators as $username => $administrator) {
-			$administrators[$username]['email'] = ((isSet ($administrator['email']) && (!empty ($administrator['email']))) ? $administrator['email'] : $username . (((!isSet ($administrator['userType'])) || ($administrator['userType'] != 'External')) ? "@{$this->settings['emailDomain']}" : ''));
+			$administrators[$username]['email']  = ((isSet ($administrator['email']) && (!empty ($administrator['email']))) ? $administrator['email'] : $username);
+			if (!substr_count ($administrators[$username]['email'], '@')) {
+				$administrators[$username]['email'] .= (((!isSet ($administrator['userType'])) || ($administrator['userType'] != 'External')) ? "@{$this->settings['emailDomain']}" : '');
+			}
 		}
 		
 		# Return the array
@@ -1328,7 +1334,8 @@ class frontControllerApplication
 				if (is_array ($this->settings['settingsTableExplodeTextarea']) && !in_array ($fieldname, $this->settings['settingsTableExplodeTextarea'])) {continue;}	// Skip if a list is supplied and the field is not in it
 				if ($field['Type'] == 'text') {
 					if (!preg_match ('/(html|richtext)/i', $fieldname)) {	// Exclude fields that look like richtext (HTML); this should match the defintion in the dataBinding function in ultimateForm.php, so that the developer can be sure that if a richtext field appears in the settings page, that it won't get exploded
-						$settingsFromTable[$fieldname] = preg_split ("/\s*\r?\n\t*\s*/", trim ($settingsFromTable[$fieldname]));
+						$settingContent = trim ($settingsFromTable[$fieldname]);
+						$settingsFromTable[$fieldname] = (strlen ($settingContent) ? preg_split ("/\s*\r?\n\t*\s*/", $settingContent) : array ());
 					}
 				}
 			}
@@ -1621,13 +1628,28 @@ class frontControllerApplication
 		if (!defined ('JSON_PRETTY_PRINT')) {define ('JSON_PRETTY_PRINT', 128);}
 		if (!defined ('JSON_UNESCAPED_UNICODE')) {define ('JSON_UNESCAPED_UNICODE', 256);}
 		
-		# Send the data
-		header ('Content-type: application/json; charset=UTF-8');
+		# Determine if a JSON-P callback is required
+		$jsonpCallback = false;
+		if (isSet ($_GET['callback'])) {
+			$jsonpCallback = (strlen ($_GET['callback']) ? $_GET['callback'] : false);
+			unset ($_GET['callback']);      // Avoid leakage into the application environment
+		}
+		
+		# Encode the JSON
 		$flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
 		if ($this->settings['apiJsonPretty']) {
 			$flags = JSON_PRETTY_PRINT | $flags;
 		}
-		echo json_encode ($data, $flags);	// Enable pretty-print; see: http://www.vinaysahni.com/best-practices-for-a-pragmatic-restful-api#pretty-print-gzip
+		$json = json_encode ($data, $flags);	// Enable pretty-print; see: http://www.vinaysahni.com/best-practices-for-a-pragmatic-restful-api#pretty-print-gzip
+		
+		# If a callback is specified, convert to JSON-P; See http://www.php.net/json-encode#95667 and https://stackoverflow.com/questions/1678214
+		if ($jsonpCallback) {
+			$json = $jsonpCallback . '(' . $json . ');';
+		}
+		
+		# Send the data
+		header ('Content-type: application/json; charset=UTF-8');
+		echo $json;
 	}
 	
 	
@@ -1780,7 +1802,7 @@ class frontControllerApplication
 	
 	
 	# Function to provide a general-purpose importing user interface
-	public function importUi ($baseFilenames, $importTypes = array ('full' => 'FULL import'), $fileCreationInstructionsHtml, $fileExtension = 'xml')
+	public function importUi ($baseFilenames, $importTypes = array ('full' => 'FULL import'), $fileCreationInstructionsHtml, $fileExtension = 'xml', $echoHtml = true)
 	{
 		# Allow long-running processes
 		ini_set ('max_execution_time', 0);
@@ -1794,6 +1816,12 @@ class frontControllerApplication
 			echo $html;
 			return;
 		}
+		
+		# Add support for application root in the exports directory setting
+		$this->settings['exportsDirectory'] = str_replace ('%applicationRoot', $this->applicationRoot, $this->settings['exportsDirectory']);
+		
+		# Define the directory
+		$this->exportsDirectory = $this->settings['exportsDirectory'];
 		
 		# Determine the dated filenames for each expected files
 		$today = date ('Ymd');
@@ -1822,8 +1850,13 @@ class frontControllerApplication
 		# Show log file if present
 		$html .= $this->importLogHtml ();
 		
-		# Show the HTML
-		echo $html;
+		# Show the HTML if required
+		if ($echoHtml) {
+			echo $html;
+		}
+		
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -1851,9 +1884,6 @@ class frontControllerApplication
 	# Function to create an upload form for importing
 	private function importUploadFilesForm ($expectedFiles)
 	{
-		# Define the directory
-		$this->exportsDirectory = $this->applicationRoot . '/exports/';
-		
 		# Start the HTML
 		$html = '';
 		
@@ -1957,7 +1987,7 @@ class frontControllerApplication
 		$this->logger ("Starting {$result['importtype']} import (started by {$this->user})", $reset = true);
 		
 		# Run the import
-		$done = $this->doImport ($files, $result['importtype'], $html);
+		$done = $this->doImport ($files, $result['importtype'], $html /* amended by reference */, $result['date']);
 		
 		# Determine duration
 		$finishTime = time ();
@@ -2136,6 +2166,7 @@ class frontControllerApplication
 			$maximumPeriod = $detectStaleLockfileHours * 60 * 60;
 			if (($now - $startTime) > $maximumPeriod) {
 				$adminMessage = "A stale lockfile, created at {$timestamp}, was detected.\n\n{$this->lockfile}";
+mail ('webmaster@geog.cam.ac.uk', 'Stale lockfile', "Test of frontControllerApplication, arising at {$_SERVER['_PAGE_URL']}, line 2169");
 				$this->reportError ($adminMessage, $publicMessage = false);
 			}
 		}
@@ -2722,7 +2753,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], $result)) {
 			
 			# Deal with variance in the fieldnames
-			$result['email'] = (isSet ($result['email']) ? $result['email'] : $result[$usernameField] . "@{$this->settings['emailDomain']}");
+			$result['email'] = (isSet ($result['email']) ? $result['email'] : $result[$usernameField] . (substr_count ($result[$usernameField], '@') ? '' : "@{$this->settings['emailDomain']}"));
 			$result['privilege'] = (isSet ($result['privilege']) ? $result['privilege'] : 'Administrator');
 			$result['forename'] = (isSet ($result['forename']) ? $result['forename'] : $result[$usernameField]);
 			$result['password'] = (isSet ($result['password']) ? $result['password'] : "[Your {$authSystemName} password]");
@@ -2954,6 +2985,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		$sinenomine = new sinenomine ($settings, $this->databaseConnection);
 		
 		# Set constraints
+		#!# This is a poor API - would be better to require to supply nested
 		if ($attributes) {
 			foreach ($attributes as $attribute) {
 				$sinenomine->attributes ($attribute[0], $attribute[1], $attribute[2], $attribute[3]);
