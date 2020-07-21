@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.9.10
+# Version 1.9.11
 class frontControllerApplication
 {
 	# Define global defaults
@@ -56,6 +56,7 @@ class frontControllerApplication
 			'feedbackRecipient'								=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),	#!# This ought to be the value of administratorEmail by default
 			'useCamUniLookup'								=> true,
 			'directoryIndex'								=> 'index.html',					# The directory index, used for local file retrieval
+			#!# Needs updating
 			'userAgent'										=> 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)',	# The user-agent string used for external retrieval
 			'emailDomain'									=> 'cam.ac.uk',
 			'ravenGetPasswordUrl'							=> 'https://jackdaw.cam.ac.uk/get-raven-password/',
@@ -74,6 +75,7 @@ class frontControllerApplication
 			'showChanges'									=> 25,		// Number of most recent changes to show in log file
 			'user'											=> false,	// Become this user
 			'form'											=> true,	// Whether to load ultimateForm
+			#!# Needs a formDiv setting, for setting the 'div' parameter of ultimateForm; this would also propagate to the sinenomine integration in editing()
 			'opening'										=> false,
 			'closing'										=> false,
 			'div'											=> false,	// Whether to create a surrounding div with this id
@@ -1016,6 +1018,7 @@ class frontControllerApplication
 		}
 		
 		# Execute each query, and show failure error message if something went wrong
+		#!# This can fail because of multiple queries in one execution
 		$i = 0;
 		foreach ($databaseStructure as $query) {
 			$i++;
@@ -1023,6 +1026,7 @@ class frontControllerApplication
 				$html  = "\n<p>The database setup process did not complete" . (count ($databaseStructure) > 1 ? ", failing at query #{$i}" : '') . ". You may need to set this up manually. The database error was:</p>";
 				$databaseError = $installerDatabaseConnection->error ();
 				$html .= "\n<p><pre>" . wordwrap (htmlspecialchars ($databaseError[2])) . '</pre></p>';
+				$html .= "\n<p><pre>" . wordwrap (htmlspecialchars ($query)) . '</pre></p>';
 				return false;
 			}
 		}
@@ -1083,7 +1087,7 @@ class frontControllerApplication
 	
 	
 	# Function to get the child actions for a function
-	public function getChildActions ($parent, $includeParent = false, $subtabsOnly = false)
+	public function getChildActions ($parent, $includeParent = false, $subtabsOnly = false, $except = array ())
 	{
 		# End if not in a subtabbed section
 		if (!$parent) {return array ();}
@@ -1100,6 +1104,9 @@ class frontControllerApplication
 				
 				# If required, skip if there is no subtab attribute
 				if ($subtabsOnly && !isSet ($attributes['subtab'])) {continue;}
+				
+				# Skip specified exceptions, if any
+				if ($except && in_array ($action, $except)) {continue;}
 				
 				# Allocate to the list
 				$children[$action] = $this->actions[$action];
@@ -3005,6 +3012,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 	# Editing of a single table, substantially delegated to the sinenomine editing component
 	# Needs adding to httpd.conf, where $applicationBaseUrl is not slash-terminated
 	#	Use MacroSinenomineEmbeddedTable "$applicationBaseUrl" "$editingUrl" "$applicationAction"
+	#!# Sinenomine integration doesn't currently enable supply of the main settings, which are partly hard-coded below; currently only dataBinding attributes and dataBinding main are supported
 	public function editingTable ($table, $dataBindingAttributes = array (), $formDiv = 'graybox lines', $tableUrlMoniker = false, $sinenomineExtraSettings = array ())
 	{
 		# Start the HTML
