@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.9.11
+# Version 1.9.12
 class frontControllerApplication
 {
 	# Define global defaults
@@ -46,6 +46,7 @@ class frontControllerApplication
 			'administrators'								=> false,	// Administrators table e.g. 'administrators' or 'facility.administrators', or an array of usernames
 			'settingsTable'									=> 'settings',	// Settings table (must be in the main database) e.g. 'settings' or false to disable (only needed a table of that name is present for a different purpose)
 			'settingsTableExplodeTextarea'					=> false,	// Whether to split textarea columns in a settings table into an array of values - true/false, or an array of fieldnames which should have this applied to
+			'settingsTableExplodeTextareaPairs'				=> false,	// Whether to split textarea columns in a settings table into key-value pairs (assuming a,b lines), or an array of fieldnames which should have this applied to; this assumes settingsTableExplodeTextarea is enabled
 			'profiles'										=> false,	// Use of the profiles system (true/false or table, e.g. 'profiles'; true will use 'profiles'
 			'tablePrefix'									=> false,	// Prefix which will be added to any table/administrators/settingsTable/profiles settings
 			'logfile'										=> './logfile.txt',
@@ -1334,24 +1335,54 @@ class frontControllerApplication
 		# Get the settings
 		if (!$settingsFromTable = $this->databaseConnection->selectOne ($this->settings['database'], $this->settings['settingsTable'], array ('id' => 1))) {return false;}
 		
-		# If the setting is a textarea (but not HTML), explode the options into a list
-		if ($this->settings['settingsTableExplodeTextarea']) {
-			$fieldStructure = $this->databaseConnection->getFields ($this->settings['database'], $this->settings['settingsTable']);
-			foreach ($fieldStructure as $fieldname => $field) {
-				if (is_array ($this->settings['settingsTableExplodeTextarea']) && !in_array ($fieldname, $this->settings['settingsTableExplodeTextarea'])) {continue;}	// Skip if a list is supplied and the field is not in it
-				if ($field['Type'] == 'text') {
-					if (!preg_match ('/(html|richtext)/i', $fieldname)) {	// Exclude fields that look like richtext (HTML); this should match the defintion in the dataBinding function in ultimateForm.php, so that the developer can be sure that if a richtext field appears in the settings page, that it won't get exploded
-						$settingContent = trim ($settingsFromTable[$fieldname]);
-						$settingsFromTable[$fieldname] = (strlen ($settingContent) ? preg_split ("/\s*\r?\n\t*\s*/", $settingContent) : array ());
-					}
-				}
-			}
-		}
-		
 		# Merge in the settings, ignoring the id, and overwriting anything currently present
 		foreach ($settingsFromTable as $key => $value) {
 			if ($key == 'id') {continue;}
 			$this->settings[$key] = $value;
+		}
+		
+		# If any setting from the table is a textarea (but not HTML), explode the options into a list, where enabled
+		if ($this->settings['settingsTableExplodeTextarea']) {
+			$this->settingsOriginal = $this->settings;	// Cache the pre-pared values, for use on the settings page
+			$fieldStructure = $this->databaseConnection->getFields ($this->settings['database'], $this->settings['settingsTable']);
+			foreach ($fieldStructure as $fieldname => $field) {
+				
+				# Skip if a list is supplied and the field is not in it
+				if (is_array ($this->settings['settingsTableExplodeTextarea']) && !in_array ($fieldname, $this->settings['settingsTableExplodeTextarea'])) {continue;}
+				
+				# Limit to text fields only
+				if (in_array ($field['Type'], array ('text', 'tinytext', 'mediumtext', 'longtext'))) {
+					
+					# Exclude fields that look like richtext (HTML); this should match the defintion in the dataBinding function in ultimateForm.php, so that the developer can be sure that if a richtext field appears in the settings page, that it won't get exploded
+					if (!preg_match ('/(html|richtext)/i', $fieldname)) {
+						
+						# Split lines out
+						$overwrittenSetting = trim ($settingsFromTable[$fieldname]);
+						$overwrittenSetting = (strlen ($overwrittenSetting) ? preg_split ("/\s*\r?\n\t*\s*/", $overwrittenSetting) : array ());
+						
+						# Overwrite the original setting
+						$this->settings[$fieldname] = $overwrittenSetting;
+						
+						# If the lines should be treated as key,value pairs, split further
+						if ($this->settings['settingsTableExplodeTextareaPairs']) {
+							
+							# Skip if a list is supplied and the field is not in it
+							if (is_array ($this->settings['settingsTableExplodeTextareaPairs']) && !in_array ($fieldname, $this->settings['settingsTableExplodeTextareaPairs'])) {continue;}
+							
+							# Parse out each line
+							$lines = array ();
+							foreach ($overwrittenSetting as $line) {
+								list ($key, $value) = explode (',', $line, 2);
+								$lines[$key] = $value;
+							}
+							$overwrittenSetting = $lines;	// Overwrite the original lines array
+						}
+						
+						# Overwrite the original setting again
+						$this->settings[$fieldname] = $overwrittenSetting;
+					}
+				}
+			}
 		}
 	}
 	
@@ -2372,11 +2403,7 @@ mail ('webmaster@geog.cam.ac.uk', 'Stale lockfile', "Test of frontControllerAppl
 		# Ensure settings are all strings - some may have been exploded
 		$settings = $this->settings;
 		if ($this->settings['settingsTableExplodeTextarea']) {
-			foreach ($settings as $key => $value) {
-				if (is_array ($value)) {
-					$settings[$key] = implode ("\n", $value);
-				}
-			}
+			$settings = $this->settingsOriginal;
 		}
 		
 		# Define default dataBinding settings
