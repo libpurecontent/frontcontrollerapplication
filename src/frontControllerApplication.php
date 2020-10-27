@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.9.12
+# Version 1.9.13
 class frontControllerApplication
 {
 	# Define global defaults
@@ -143,6 +143,16 @@ class frontControllerApplication
 			'url' => 'admin.html',
 			'tab' => 'Admin',
 			'administrator' => true,
+			'description' => 'Administrative options, including settings',
+		),
+		'settings' => array (
+			'description' => 'Settings',
+			'url' => 'settings.html',
+			'administrator' => true,
+			'parent' => 'admin',
+			'subtab' => 'Settings',
+			'icon' => 'cog',
+			'description' => 'Settings and configuration for this system',
 		),
 		'administrators' => array (
 			'description' => 'Add/remove/list administrators',
@@ -151,6 +161,8 @@ class frontControllerApplication
 			'parent' => 'admin',
 			'subtab' => 'Administrators',
 			'restrictedAdministrator' => true,
+			'icon' => 'group',
+			'description' => 'Manage who has special privileges within this system',
 		),
 		'history' => array (
 			'description' => 'History of changes made',
@@ -159,13 +171,6 @@ class frontControllerApplication
 			'parent' => 'admin',
 			'subtab' => 'History',
 			'restrictedAdministrator' => true,
-		),
-		'settings' => array (
-			'description' => 'Settings',
-			'url' => 'settings.html',
-			'administrator' => true,
-			'parent' => 'admin',
-			'subtab' => 'Settings',
 		),
 		'login' => array (
 			'description' => 'Login',
@@ -513,13 +518,13 @@ class frontControllerApplication
 			}
 		}
 		
-		# Move feedback and admin to the end
+		# Move feedback, admin and other functions to the end
 		$functions = array ('editing', 'profile', 'import', 'templates', 'apidocumentation', 'feedback', 'help', 'admin');
 		foreach ($functions as $function) {
 			if (isSet ($this->actions[$function])) {
-				$temp{$function} = $this->actions[$function];
+				$actionAttributes = $this->actions[$function];
 				unset ($this->actions[$function]);
-				$this->actions[$function] = $temp{$function};
+				$this->actions[$function] = $actionAttributes;
 			}
 		}
 		
@@ -1658,6 +1663,7 @@ class frontControllerApplication
 		
 		# If an error occured, set the error as the output
 		if ($error) {
+			header ('HTTP/1.0 400 Bad Request');
 			$data = array ('error' => $error);
 		}
 		
@@ -2430,6 +2436,8 @@ mail ('webmaster@geog.cam.ac.uk', 'Stale lockfile', "Test of frontControllerAppl
 			'unsavedDataProtection' => true,
 			'jQuery' => !$this->settings['jQuery'],	// Do not load if already loaded
 			'cols' => 80,
+			'richtextEditorToolbarSet' => 'BasicLonger',	// Settings tend to be simple text, such as a paragraph with minimal formatting
+			'richtextHeight' => 150,
 		));
 		$form->dataBinding ($dataBindingSettings);
 		
