@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.9.13
+# Version 1.10.0
 class frontControllerApplication
 {
 	# Define global defaults
@@ -68,7 +68,9 @@ class frontControllerApplication
 			'useAdmin'										=> true,
 			'revealAdminFunctions'							=> false,	// Whether to show admins-only tabs etc to non-administrators
 			'useFeedback'									=> true,
-			'disableTabs'									=> false,
+			'disableTabs'									=> false,	// Whether to disable tabs
+			'disableSubtabs'								=> false,	// Whether to disable subtabs
+			'disableGuiSearchBox'							=> false,	// Whether to disable the search box
 			'helpTab'										=> false,
 			'useEditing'									=> false,	// Whether to enable editing as a main tab
 			'debug'											=> false,	# Whether to switch on debugging info
@@ -273,6 +275,9 @@ class frontControllerApplication
 	# Constructor
 	public function __construct ($settings = array (), $disableAutoGui = false)
 	{
+		# In CLI mode, e.g. for cron, emulate a webserver environment
+		$settings = $this->cliModeEmulation ($settings);
+		
 		# Load required libraries
 		require_once ('application.php');
 		
@@ -487,11 +492,13 @@ class frontControllerApplication
 		}
 		
 		# Load any stylesheet if supplied
-		if (!$this->exportType) {
-			$stylesheet = $this->applicationRoot . $this->settings['applicationStylesheet'];
-			if (is_readable ($stylesheet)) {
-				$styles = file_get_contents ($stylesheet);
-				echo "\n\n" . '<style type="text/css">' . "\n\t" . str_replace ("\n", "\n\t", trim ($styles)) . "\n</style>\n";
+		if ($this->settings['applicationStylesheet']) {
+			if (!$this->exportType) {
+				$stylesheet = $this->applicationRoot . $this->settings['applicationStylesheet'];
+				if (is_readable ($stylesheet)) {
+					$styles = file_get_contents ($stylesheet);
+					echo "\n\n" . '<style type="text/css">' . "\n\t" . str_replace ("\n", "\n\t", trim ($styles)) . "\n</style>\n";
+				}
 			}
 		}
 		
@@ -552,10 +559,12 @@ class frontControllerApplication
 		# Show the tabs, any subtabs, and the action name
 		$selectedTab = ($this->tabForced ? $this->tabForced : $this->action);
 		$headerHtml .= $this->showTabs ($selectedTab, $this->settings['tabUlClass']);
-		if (method_exists ($this, 'guiSearchBox')) {
-			$headerHtml .= "\n<div id=\"cornersearch\">";
-			$headerHtml .= $this->guiSearchBox ();
-			$headerHtml .= "\n</div>";
+		if (!$this->settings['disableGuiSearchBox']) {
+			if (method_exists ($this, 'guiSearchBox')) {
+				$headerHtml .= "\n<div id=\"cornersearch\">";
+				$headerHtml .= $this->guiSearchBox ();
+				$headerHtml .= "\n</div>";
+			}
 		}
 		$headerHtml .= $this->showSubTabs ($this->action);
 		if (isSet ($this->actions[$this->action]) && array_key_exists ('description', $this->actions[$this->action]) && $this->actions[$this->action]['description'] && !substr_count ($this->actions[$this->action]['description'], '%') && (!isSet ($this->actions[$this->action]['heading']) || $this->actions[$this->action]['heading'])) {
@@ -723,6 +732,54 @@ class frontControllerApplication
 		if (method_exists ($this, 'shutdown')) {
 			$this->shutdown ();
 		}
+	}
+	
+	
+	# Function to emulate a webserver environment when in CLI mode
+	# Launch using e.g. 
+	#   cd /path/to/bootstrap/file/ && DOCUMENT_ROOT="/path/to/document/root/" SERVER_ADMIN="webmaster@example.com" php -d include_path="/include/path/as/per/.httpd.conf.extract/" index.html cron
+	# More complex parameterrequests could be passed in using: `REQUEST_URI="?foo=bar" php index.html`
+	private function cliModeEmulation ($settings)
+	{
+		# End if not in CLI mode
+		if (php_sapi_name () != 'cli') {return $settings;}
+		
+		# Deal with DOCUMENT_ROOT, which does not appear as $_SERVER['DOCUMENT_ROOT'] even when added to the environment in the CLI call (`DOCUMENT_ROOT=".." php ...`)
+		$_SERVER['DOCUMENT_ROOT'] = getenv ('DOCUMENT_ROOT');	// NB $_ENV not always populated
+		
+		# Set SCRIPT_FILENAME to behave like the webserver behaviour, i.e. the full path rather than relative; see: https://php.net/reserved.variables.server
+		list ($scriptPath) = get_included_files ();		// Assumes first being the 'main' file; see: https://stackoverflow.com/a/49045535/180733
+		$_SERVER['SCRIPT_FILENAME'] = $scriptPath;
+		
+		# Bring in arguments
+		global $argv;
+		
+		# Get any action
+		if (isSet ($argv[1])) {
+			$_GET['action'] = $argv[1];
+		}
+		
+		# Get any action
+		if (isSet ($argv[2])) {
+			$_GET['id'] = $argv[2];
+		}
+		
+		# Disable GUI features which cause unnecessary output
+		$settings['applicationStylesheet'] = false;
+		$settings['div'] = false;
+		$settings['authLinkVisibility'] = false;
+		$settings['h1'] = '';
+		$settings['disableTabs'] = true;
+		$settings['disableSubtabs'] = true;
+		$settings['disableGuiSearchBox'] = true;
+		
+		# Deal with user auth, potentially used in requestHttpAuthUsername () and in cron ()
+		if ($_GET['action'] == 'cron') {
+			$_SERVER['PHP_AUTH_USER'] = $settings['cronUsername'];
+		}
+		
+		# Return the modified settings
+		return $settings;
 	}
 	
 	
@@ -1086,6 +1143,11 @@ class frontControllerApplication
 		# Compile the HTML, adding a heading
 		$html  = "\n<h4 id=\"tabsheading\">" . (isSet ($this->actions[$parent]['subheading']) ? $this->actions[$parent]['subheading'] : $this->actions[$parent]['description']) . '</h4>';
 		$html .= $this->actionsListHtml ($actions, $useDescriptionAsText = false, $this->settings['tabUlClass'] . ' subtabs', $current);
+		
+		# If not showing the subtabs, cancel the HTML
+		if ($this->settings['disableSubtabs']) {
+			$html = '';
+		}
 		
 		# Return the HTML
 		return $html;
@@ -1712,7 +1774,7 @@ class frontControllerApplication
 			
 			# Obtain the HTTP-supplied username and validate it
 			if (!$httpAuthUsername = $this->requestHttpAuthUsername ()) {
-				$error = 'A HTTP-supplied username has not been supplied.';	// Probably will never be shown, as a dialog box should be shown instead
+				$error = 'An HTTP-supplied username has not been supplied.';	// Probably will never be shown, as a dialog box should be shown instead
 				return false;
 			}
 			
@@ -1761,6 +1823,7 @@ class frontControllerApplication
 		}
 		
 		# End if not enabled
+		#!# Eliminate cronUsername when all uses migrated to direct cron rather than HTTP-launched
 		if (!$this->settings['cronUsername']) {
 			echo 'Application error: The cron system is not enabled.';
 			return false;
@@ -1774,13 +1837,13 @@ class frontControllerApplication
 		
 		# Obtain the HTTP-supplied username and validate it
 		if (!$httpAuthUsername = $this->requestHttpAuthUsername ()) {
-			echo 'A HTTP-supplied username has not been supplied.';	// Probably will never be shown, as a dialog box should be shown instead
+			echo 'An HTTP-supplied username for cron has not been supplied.';	// Probably will never be shown, as a dialog box should be shown instead
 			return false;
 		}
 		
 		# Check the username matches
 		if ($httpAuthUsername != $this->settings['cronUsername']) {
-			echo "The HTTP-supplied username ({$httpAuthUsername}) is not correct.";
+			echo "The HTTP-supplied username ({$httpAuthUsername}) for cron is not correct.";
 			return false;
 		}
 		
@@ -2641,7 +2704,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		# Determine the name of the username field
 		#!# Use of $this->settings['administrators'] as table name here needs auditing
 		$fields = $this->databaseConnection->getFieldnames ($this->settings['database'], $this->settings['administrators']);
-		$possibleUsernameFields = array ('username', 'crsid', "username__JOIN__{$this->settings['peopleDatabase']}__people__reserved");
+		$possibleUsernameFields = array ('id', 'username', 'crsid', "username__JOIN__{$this->settings['peopleDatabase']}__people__reserved");
 		foreach ($possibleUsernameFields as $field) {
 			if (in_array ($field, $fields)) {
 				return $field;
