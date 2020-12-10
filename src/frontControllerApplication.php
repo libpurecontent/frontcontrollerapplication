@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.10.0
+# Version 1.10.1
 class frontControllerApplication
 {
 	# Define global defaults
@@ -1872,8 +1872,8 @@ class frontControllerApplication
 		header ('WWW-Authenticate: Basic realm="Specify the username, and anything as the password."');
 		header ('HTTP/1.0 401 Unauthorized');
 		
-		# Return false
-		return false;
+		# End; do not allow continuing to generic 400 error
+		die;
 	}
 	
 	
@@ -2273,7 +2273,6 @@ class frontControllerApplication
 			$maximumPeriod = $detectStaleLockfileHours * 60 * 60;
 			if (($now - $startTime) > $maximumPeriod) {
 				$adminMessage = "A stale lockfile, created at {$timestamp}, was detected.\n\n{$this->lockfile}";
-mail ('webmaster@geog.cam.ac.uk', 'Stale lockfile', "Test of frontControllerApplication, arising at {$_SERVER['_PAGE_URL']}, line 2169");
 				$this->reportError ($adminMessage, $publicMessage = false);
 			}
 		}
