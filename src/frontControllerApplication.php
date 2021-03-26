@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.10.1
+# Version 1.10.2
 class frontControllerApplication
 {
 	# Define global defaults
@@ -90,7 +90,7 @@ class frontControllerApplication
 			'chmodPermissions'								=> 0644,	// Permissions for chmod calls; the default here is standard Unix
 			'editingPagination'								=> 250,		// Pagination when editing the embedded record editor
 			'cronUsername'									=> false,	// HTTP username required for cron jobs
-			'apiUsername'									=> false,	// HTTP username required for API calls
+			'apiUsername'									=> false,	// HTTP username required for API calls, or true for open access
 			'apiJsonPretty'									=> true,	// Whether to use pretty printing for JSON output
 			'applicationStylesheet'							=> '/styles.css',	// Where / represents the root of the repository containing the application
 			'dataDirectory'									=> '/data/',	// Where / represents the root of the repository containing user data files
@@ -101,6 +101,8 @@ class frontControllerApplication
 			'useTemplating'									=> false,	// Whether to enable templating
 			'templatesDirectory'							=> '%applicationRoot/app/views/',
 			'exportsDirectory'								=> '%applicationRoot/exports/',
+			'userSwitcherUsers'								=> false,	// Or callback returning the list of users (as username => name, optionally as nested groupings) for use in a drop-down form
+			'userSwitcherOnSwitch'							=> false,	// Or callback that will be run if the user is switched
 		);
 	}
 	
@@ -244,7 +246,7 @@ class frontControllerApplication
 			'administrator' => true,
 		),
 		'data' => array (	// Used for e.g. AJAX calls, etc.
-			'description' => 'Data point',
+			'description' => 'Data endpoint',
 			'url' => 'data.html',
 			'export' => true,
 		),
@@ -459,6 +461,11 @@ class frontControllerApplication
 				echo $footer;
 				return false;
 			}
+		}
+		
+		# Add user-switching UI control if required; this must be run after the $this->userIsAdministrator phase and after mainPreActions in case that sets required properties
+		if ($this->settings['userSwitcherUsers']) {
+			echo $this->userSwitcher ();
 		}
 		
 		# Get the available actions
@@ -736,7 +743,7 @@ class frontControllerApplication
 	
 	
 	# Function to emulate a webserver environment when in CLI mode
-	# Launch using e.g. 
+	# Launch using e.g.
 	#   cd /path/to/bootstrap/file/ && DOCUMENT_ROOT="/path/to/document/root/" SERVER_ADMIN="webmaster@example.com" php -d include_path="/include/path/as/per/.httpd.conf.extract/" index.html cron
 	# More complex parameterrequests could be passed in using: `REQUEST_URI="?foo=bar" php index.html`
 	private function cliModeEmulation ($settings)
@@ -759,7 +766,7 @@ class frontControllerApplication
 			$_GET['action'] = $argv[1];
 		}
 		
-		# Get any action
+		# Get any ID
 		if (isSet ($argv[2])) {
 			$_GET['id'] = $argv[2];
 		}
@@ -780,6 +787,78 @@ class frontControllerApplication
 		
 		# Return the modified settings
 		return $settings;
+	}
+	
+	
+	# Function to provide a user switcher
+	private function userSwitcher ()
+	{
+		# Ensure the user is an administrator
+		if (!$this->userIsAdministrator) {return false;}
+		
+		# Get the list of users
+		$callback = $this->settings['userSwitcherUsers'];
+		$users = $callback ();
+		
+		# Start a session
+		if (!session_id ()) {
+			session_start ();
+		}
+		
+		# Check the session for the switched user
+		$default = false;
+		if (isSet ($_SESSION['userswitcher'])) {
+			$usersFlattened = application::flattenMultidimensionalArray ($users);	// Ensure a flattened array, in case nested by some grouping
+			if (array_key_exists ($_SESSION['userswitcher'], $usersFlattened)) {
+				$default = $_SESSION['userswitcher'];
+				
+				# Set the user properties
+				#!# This is not very satifactory for generic use, and has only been tested against a specific application; restricted administrator is not yet supported, and other user properties need reload
+				$this->user = $_SESSION['userswitcher'];
+				$this->userVisibleIdentifier = $usersFlattened[$this->user];
+				$this->userIsAdministrator = $this->userIsAdministrator ();
+				
+				# If there is a callback, run it
+				if ($this->settings['userSwitcherOnSwitch']) {
+					$callback = $this->settings['userSwitcherOnSwitch'];
+					$callback ($this->user);
+				}
+			}
+		}
+		
+		# Create a form
+		$form = new form (array (
+			'name' => 'userswitcher',
+			'div' => 'userswitcher ultimateform',
+			'formCompleteText' => false,
+			'display' => 'template',
+			'displayTemplate' => '<p class="alignright">Act as user: {[[PROBLEMS]]} {user} {[[SUBMIT]]}</p>',
+			'requiredFieldIndicator' => false,
+			'submitButtonAccesskey' => false,
+			'submitButtonText' => 'Go!',
+			'reappear' => true,
+		));
+		$form->select (array (
+		    'name'				=> 'user',
+		    'title'				=> 'Username',
+		    'values'			=> $users,
+			'default'			=> $default,
+		    'required'			=> false,
+			'nullText'			=> '[Myself]',
+			'onchangeSubmit'	=> true,
+		));
+		$html = '';
+		if ($result = $form->process ($html)) {
+			
+			# Set the new session user
+			$_SESSION['userswitcher'] = $result['user'];
+			
+			# Refresh the page
+			$html = application::sendHeader ('refresh');
+		}
+		
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -2282,7 +2361,7 @@ class frontControllerApplication
 	}
 	
 	
-	# Data point
+	# Data endpoint
 	public function data ()
 	{
 		echo '<p>This URL can be assigned a function data() for transmission of data.</p>';
