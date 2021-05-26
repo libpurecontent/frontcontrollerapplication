@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.10.2
+# Version 1.10.3
 class frontControllerApplication
 {
 	# Define global defaults
@@ -2558,6 +2558,7 @@ class frontControllerApplication
 			'database' => $this->settings['database'],
 			'table' => $this->settings['settingsTable'],
 			'intelligence' => true,
+			'int1ToCheckbox' => true,
 			'data' => $settings,
 			'attributes' => array (),
 		);
@@ -2705,7 +2706,8 @@ class frontControllerApplication
 		$form = new form (array (
 			'displayRestrictions' => false,
 			'formCompleteText' => "Many thanks for your input - we'll be in touch shortly if applicable.",
-			'antispam'	=> true,
+			'antispam' => true,
+			'emailName' => $this->settings['applicationName'],
 		));
 		
 		# Widgets
