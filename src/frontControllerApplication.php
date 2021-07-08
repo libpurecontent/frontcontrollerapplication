@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.10.3
+# Version 1.10.4
 class frontControllerApplication
 {
 	# Define global defaults
@@ -2827,6 +2827,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		$html  = '';
 		
 		# Compile the HTML
+		#!# if (true) is bogus code
 		if (true) {
 			$authSystemName = 'Raven';
 			if ($this->settings['internalAuth']) {
@@ -2971,8 +2972,9 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		$html .= "\n<h3 id=\"remove\">Remove an administrator</h3>";
 		$administrators = $this->administrators;
 		//unset ($administrators[$this->user]);	// Remove current user - you can't delete yourself
+		#!# Should be changed so that there is always one admin, but that inactive admins can always be removed
 		if (!$administrators) {
-			$html .= "<p>There are no other administrators.</p>";
+			$html .= "<p>No administrators can be removed, as there always needs to be at least one.</p>";
 		} else {
 			$form = new form (array (
 				'name' => 'remove',
@@ -2981,6 +2983,8 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 				'div' => false,
 				'requiredFieldIndicator' => false,
 			));
+			#!# Should have an option to e-mail them, set on by default
+			$form->heading ('p', 'NB Removing an admin will not e-mail them.');
 			$form->select (array (
 				'name'	=> $usernameField,
 				'title'	=> 'Select administrator to remove',
@@ -3181,6 +3185,9 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		$sinenomine->process ();
 		$html .= $sinenomine->getContentCss (true);
 		$html .= $sinenomine->getHtml ();
+		
+		# Surround with a div to enable styling
+		$html = "\n<div id=\"editinginternal\">\n\n" . $html . "\n\n</div>";
 		
 		# Show the HTML
 		echo $html;
