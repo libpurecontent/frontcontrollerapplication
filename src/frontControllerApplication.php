@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.10.4
+# Version 1.10.5
 class frontControllerApplication
 {
 	# Define global defaults
@@ -3057,14 +3057,72 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		if (!$this->administrators) {
 			$html .= "\n<p>There are no administrators set up yet.</p>";
 		} else {
+			
+			# Show editing form if user selected
+			$username = (isSet ($_GET['user']) && strlen ($_GET['user']) && array_key_exists ($_GET['user'], $this->administrators) ? $_GET['user'] : false);
+			if ($username) {
+				$html .= $this->usernameEditingForm ($username, $showFields);
+			}
+			
+			# Show the listing
 			$html .= "\n<p>The following are administrators of this system and can make changes to the data in it:</p>";
 			$onlyFields = array_merge (array ($usernameField), array_keys ($showFields));
 			if ($this->settings['externalAuth']) {$onlyFields[] = 'userType';}
 			$tableHeadingSubstitutions = $showFields;
 			$tableHeadingSubstitutions[$usernameField] = 'Username';
-			$html .= application::htmlTable ($this->administrators, $tableHeadingSubstitutions, $class = 'lines', $showKey = false, $uppercaseHeadings = true, false, false, false, false, $onlyFields);
+			$administrators = $this->administrators;
+			$administratorUsernameField = $this->administratorUsernameField ();
+			foreach ($administrators as $username => $user) {
+				$url = $this->baseUrl . '/' . $this->actions['administrators']['url'] . '?user=' . htmlspecialchars (urlencode ($user[$administratorUsernameField])) . '#list';
+				$administrators[$username][$administratorUsernameField] = "<a href=\"{$url}\">" . htmlspecialchars ($user[$administratorUsernameField]) . '</a>';
+			}
+			$html .= application::htmlTable ($administrators, $tableHeadingSubstitutions, $class = 'lines', $showKey = false, $uppercaseHeadings = true, $allowHtml = array ($administratorUsernameField), false, false, false, $onlyFields);
 		}
 		$html .= "\n" . '</div>';
+		
+		# Return the HTML
+		return $html;
+	}
+	
+	
+	# Function to create a username editing form
+	private function usernameEditingForm ($username, $showFields)
+	{
+		# Start the HTML
+		$html = '';
+		
+		# Determine the current page URL
+		$url = $this->baseUrl . '/' . $this->actions['administrators']['url'];
+		
+		# Determine the username field in the table
+		$administratorUsernameField = $this->administratorUsernameField ();
+		
+		# Create the form
+		$form = new form (array (
+			'databaseConnection'		=> $this->databaseConnection,
+			'formCompleteText'			=> false,
+			'requiredFieldIndicator'	=> false,
+			'unsavedDataProtection'		=> true,
+		));
+		$form->heading ('p', 'Edit details for user <em>' . htmlspecialchars ($username) . "</em> (or <a href=\"{$url}#list\">cancel</a>):");
+		$form->dataBinding (array (
+			'database' => $this->settings['database'],
+			'table' => 'administrators',
+			'data' => $this->administrators[$username],
+			'includeOnly' => array_keys ($showFields),
+			'attributes' => array (
+				$administratorUsernameField => array ('editable' => false, ),
+			),
+		));
+		if (!$result = $form->process ($html)) {
+			return $html;
+		}
+		
+		# Update the user
+		$this->databaseConnection->update ($this->settings['database'], 'administrators', $result, $conditions = array ($administratorUsernameField => $username));
+		
+		# Redirect to main page, which will show the new data
+		$html = application::sendHeader (302, $url . '#list', true);
 		
 		# Return the HTML
 		return $html;
