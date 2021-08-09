@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.10.5
+# Version 1.10.6
 class frontControllerApplication
 {
 	# Define global defaults
@@ -43,7 +43,7 @@ class frontControllerApplication
 			'jQuery'										=> false,	// Whether to load jQuery
 			'peopleDatabase'								=> 'people',
 			'table'											=> NULL,
-			'administrators'								=> false,	// Administrators table e.g. 'administrators' or 'facility.administrators', or an array of usernames
+			'administrators'								=> false,	// Administrators table e.g. 'administrators' or 'facility.administrators', or an array of usernames; true will use the default, 'administrators'
 			'settingsTable'									=> 'settings',	// Settings table (must be in the main database) e.g. 'settings' or false to disable (only needed a table of that name is present for a different purpose)
 			'settingsTableExplodeTextarea'					=> false,	// Whether to split textarea columns in a settings table into an array of values - true/false, or an array of fieldnames which should have this applied to
 			'settingsTableExplodeTextareaPairs'				=> false,	// Whether to split textarea columns in a settings table into key-value pairs (assuming a,b lines), or an array of fieldnames which should have this applied to; this assumes settingsTableExplodeTextarea is enabled
@@ -752,11 +752,15 @@ class frontControllerApplication
 		if (php_sapi_name () != 'cli') {return $settings;}
 		
 		# Deal with DOCUMENT_ROOT, which does not appear as $_SERVER['DOCUMENT_ROOT'] even when added to the environment in the CLI call (`DOCUMENT_ROOT=".." php ...`)
-		$_SERVER['DOCUMENT_ROOT'] = getenv ('DOCUMENT_ROOT');	// NB $_ENV not always populated
+		if (getenv ('DOCUMENT_ROOT')) {
+			$_SERVER['DOCUMENT_ROOT'] = getenv ('DOCUMENT_ROOT');	// NB $_ENV not always populated
+		}
 		
 		# Set SCRIPT_FILENAME to behave like the webserver behaviour, i.e. the full path rather than relative; see: https://php.net/reserved.variables.server
-		list ($scriptPath) = get_included_files ();		// Assumes first being the 'main' file; see: https://stackoverflow.com/a/49045535/180733
-		$_SERVER['SCRIPT_FILENAME'] = $scriptPath;
+		if (getenv ('SCRIPT_FILENAME')) {
+			list ($scriptPath) = get_included_files ();		// Assumes first being the 'main' file; see: https://stackoverflow.com/a/49045535/180733
+			$_SERVER['SCRIPT_FILENAME'] = $scriptPath;
+		}
 		
 		# Bring in arguments
 		global $argv;
@@ -781,6 +785,7 @@ class frontControllerApplication
 		$settings['disableGuiSearchBox'] = true;
 		
 		# Deal with user auth, potentially used in requestHttpAuthUsername () and in cron ()
+		#!# Currently cronUsername HAS to be supplied in the boostrap file and not the client class's defaults as cliModeEmulation is called too early
 		if ($_GET['action'] == 'cron') {
 			$_SERVER['PHP_AUTH_USER'] = $settings['cronUsername'];
 		}
