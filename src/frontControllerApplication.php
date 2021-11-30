@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.10.6
+# Version 1.11.0
 class frontControllerApplication
 {
 	# Define global defaults
@@ -1717,8 +1717,11 @@ class frontControllerApplication
 	# API documentation page
 	public function apidocumentation ($introductionHtml = '')
 	{
+		# Get the API class
+		$apiClass = $this->getApiClass ();
+		
 		# Create a list of API calls
-		$apiCalls = $this->getApiCalls (true);
+		$apiCalls = $this->getApiCalls ($apiClass, true);
 		
 		# Ensure that apiCalls have been defined
 		if (!$apiCalls) {
@@ -1730,8 +1733,8 @@ class frontControllerApplication
 		$html = "\n<p>This page details the API calls available.</p>";
 		
 		# Add introduction if any
-		if (method_exists ($this, 'apidocumentationIntroduction')) {
-			$html .= $this->apidocumentationIntroduction ();
+		if (method_exists ($apiClass, 'apidocumentationIntroduction')) {
+			$html .= $apiClass->apidocumentationIntroduction ();
 		}
 		
 		# Add drop-down list
@@ -1748,13 +1751,13 @@ class frontControllerApplication
 			$html .= "\n<h2 class=\"apidocumentation\" id=\"{$apiCall}\"><a href=\"#{$apiCall}\">#</a> {$apiCall}</h2>";
 			
 			# State if no documentation
-			if (!method_exists ($this, $documentationMethod)) {
+			if (!method_exists ($apiClass, $documentationMethod)) {
 				$html .= "\n<p><em>No documentation available yet.</em></p>";
 				continue;
 			}
 			
 			# Add documentation
-			$html .= $this->{$documentationMethod} ();
+			$html .= $apiClass->{$documentationMethod} ();
 		}
 		
 		# Show the HTML
@@ -1762,11 +1765,28 @@ class frontControllerApplication
 	}
 	
 	
+	# Function to load the API class (either a distinct class, or the core class)
+	private function getApiClass ()
+	{
+		# Check for a dedicated API file
+		$apiFile = $this->applicationRoot . '/api.php';
+		if (file_exists ($apiFile)) {
+			require_once ($apiFile);
+			$apiClass = new api ($this, $this->settings, $this->databaseConnection, $this->baseUrl);
+		} else {
+			$apiClass = $this;
+		}
+		
+		# Return the class handle
+		return $apiClass;
+	}
+	
+	
 	# Function to get the list of API calls
-	private function getApiCalls ($documentationMode = false)
+	private function getApiCalls ($apiClass, $documentationMode = false)
 	{
 		# Get the API calls defined by the application class
-		$classMethods = get_class_methods ($this);
+		$classMethods = get_class_methods ($apiClass);
 		$apiCalls = array ();
 		foreach ($classMethods as $classMethod) {
 			if (preg_match ('/^apiCall_([a-zA-Z]+)$/', $classMethod, $matches)) {
@@ -1787,8 +1807,11 @@ class frontControllerApplication
 	#!# Make private once overriding callers have been migrated
 	public function api ()
 	{
+		# Get the API class
+		$apiClass = $this->getApiClass ();
+		
 		# Get the list of API calls
-		$apiCalls = $this->getApiCalls ();
+		$apiCalls = $this->getApiCalls ($apiClass);
 		
 		# Ensure that apiCalls have been defined
 		if (!$apiCalls) {
@@ -1804,7 +1827,7 @@ class frontControllerApplication
 			
 			# Obtain the data (which may be empty) from the API calls function; error is returned by reference
 			$function = $apiCalls[$method];
-			$data = $this->{$function} ($id, $error);	// i.e. uses class method defined as apiCall_foobar ($id, &$error = '')
+			$data = $apiClass->{$function} ($id, $error);	// i.e. uses class method defined as apiCall_foobar ($id, &$error = '')
 		}
 		
 		# If an error occured, set the error as the output
