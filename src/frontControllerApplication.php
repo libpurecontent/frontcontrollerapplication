@@ -5,7 +5,7 @@
 
 
 # Front Controller pattern application
-# Version 1.11.0
+# Version 1.11.1
 class frontControllerApplication
 {
 	# Define global defaults
@@ -687,7 +687,7 @@ class frontControllerApplication
 		$this->userPhone = false;
 		if ($this->settings['useCamUniLookup']) {
 			if ($this->user) {
-				if ($person = camUniData::getLookupData ($this->user)) {
+				if ($person = camUniData::lookupUser ($this->user)) {
 					$this->userName = $person['name'];
 					$this->userEmail = ($person['email'] ? $person['email'] : $this->user . '@' . $this->settings['emailDomain']);
 					$this->userPhone = $person['telephone'];
@@ -2434,7 +2434,7 @@ class frontControllerApplication
 	{
 		# Attempt to get the data
 		if ($this->settings['useCamUniLookup']) {
-			if ($userLookupData = camUniData::getLookupData ($user)) {
+			if ($userLookupData = camUniData::lookupUser ($user)) {
 				return $userLookupData['name'];
 			}
 		}
@@ -2751,7 +2751,7 @@ class frontControllerApplication
 			'name'		=> 'name',
 			'title'		=> 'Your name',
 			'required'	=> true,
-			'default'	=> ($this->settings['useCamUniLookup'] && $this->user && ($userLookupData = camUniData::getLookupData ($this->user)) ? $userLookupData['name'] : ''),
+			'default'	=> $this->userName,
 		));
 		$form->email (array (
 			'name'		=> 'contacts',
@@ -3436,6 +3436,10 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 	# Function to provide templatisation
 	public function templatise ($templateFile = false /* Normally assigned automatically based on the action */)
 	{
+		# Add general properties
+		$this->template['userIsAdministrator'] = $this->userIsAdministrator;
+		$this->template['baseUrl'] = $this->baseUrl;
+		
 		# Assign each provided placeholder
 		foreach ($this->template as $placeholder => $fragmentHtml) {
 			$this->templateHandle->assign ($placeholder, $fragmentHtml);
