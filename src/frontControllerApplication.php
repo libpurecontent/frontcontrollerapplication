@@ -2,10 +2,11 @@
 
 
 #!# Add flag to add an 'admins can create users' flag option
+#!# Needs a legacyEchoOutput to echo rather than return HTML, initially false then make default
 
 
 # Front Controller pattern application
-# Version 1.11.1
+# Version 1.11.2
 class frontControllerApplication
 {
 	# Define global defaults
@@ -271,6 +272,7 @@ class frontControllerApplication
 	
 	# Templating
 	public $template = array ();
+	#!# Should change writing of templateFunctions to be a setting, not a direct change without an accessor
 	public $templateFunctions = array ();	// NB Functions must be within the class, not static, and marked public
 	
 	
@@ -376,7 +378,7 @@ class frontControllerApplication
 		# If required, make connections to the database server and ensure the tables exist
 		if ($this->settings['useDatabase']) {
 			require_once ('database.php');
-			$this->databaseConnection = new database ($this->settings['hostname'], $this->settings['username'], $this->settings['password'], $this->settings['database'], $this->settings['vendor'], $this->settings['logfile'], $this->user, $this->settings['nativeTypes']);
+			$this->databaseConnection = new database ($this->settings['hostname'], $this->settings['username'], $this->settings['password'], $this->settings['database'], $this->settings['vendor'], $this->settings['logfile'], $this->user /* If using internalAuth, set later */, $this->settings['nativeTypes']);
 			if (!$this->databaseConnection->connection) {
 				echo $this->databaseConnection->reportError ($this->settings['administratorEmail'], $this->settings['applicationName']);
 				echo $footer;
@@ -416,6 +418,9 @@ class frontControllerApplication
 			$this->loadInternalAuth ();
 			$this->user = $this->internalAuthClass->getUserId ();
 			$this->userEmail = $this->internalAuthClass->getUserEmail ();
+			if ($this->settings['useDatabase']) {
+				$this->databaseConnection->setUserForLogging ($this->userEmail);
+			}
 			$this->userVisibleIdentifier = $this->internalAuthClass->getUserEmail ();
 			#!# This appears above the tabs
 			echo $this->internalAuthClass->getHtml ();	// Basically will only appear if the user gets logged out for security reasons
@@ -510,6 +515,7 @@ class frontControllerApplication
 		}
 		
 		# Determine the data directory
+		#!# If an application is using inheritance, this ends up getting the parent, not the child
 		if ($this->settings['dataDirectory']) {
 			$dataDirectory = $this->applicationRoot . $this->settings['dataDirectory'];
 			if (is_dir ($dataDirectory) && is_readable ($dataDirectory)) {
@@ -686,7 +692,8 @@ class frontControllerApplication
 		$this->userName = false;
 		$this->userPhone = false;
 		if ($this->settings['useCamUniLookup']) {
-			if ($this->user) {
+			$isCronUser = ($this->settings['cronUsername'] && ($this->user == $this->settings['cronUsername']));
+			if ($this->user && !$isCronUser) {
 				if ($person = camUniData::lookupUser ($this->user)) {
 					$this->userName = $person['name'];
 					$this->userEmail = ($person['email'] ? $person['email'] : $this->user . '@' . $this->settings['emailDomain']);
@@ -697,6 +704,9 @@ class frontControllerApplication
 		
 		# Create a shortcut for the current year
 		$this->year = date ('Y');
+		
+		# Initialise templating if required; this is done before main() to enable it to be passed onto subclasses loaded there
+		$this->templateHandle = $this->initialiseTemplating ();
 		
 		# Additional processing if required
 		if (method_exists ($this, 'main')) {
@@ -720,9 +730,6 @@ class frontControllerApplication
 			header ('Cache-Control: no-cache, must-revalidate');	// HTTP/1.1
 			header ('Expires: Sat, 26 Jul 1997 05:00:00 GMT');		// Date in the past
 		}
-		
-		# Initialise templating if required
-		$this->templateHandle = $this->initialiseTemplating ();
 		
 		# Perform the action
 		if (!$disableAutoGui) {
@@ -2434,8 +2441,11 @@ class frontControllerApplication
 	{
 		# Attempt to get the data
 		if ($this->settings['useCamUniLookup']) {
-			if ($userLookupData = camUniData::lookupUser ($user)) {
-				return $userLookupData['name'];
+			$isCronUser = ($this->settings['cronUsername'] && ($user == $this->settings['cronUsername']));
+			if (!$isCronUser) {
+				if ($userLookupData = camUniData::lookupUser ($user)) {
+					return $userLookupData['name'];
+				}
 			}
 		}
 		
@@ -2490,7 +2500,7 @@ class frontControllerApplication
 		foreach ($changes as $index => $change) {
 			if (++$i == $this->settings['showChanges']) {break;}
 			$delimiter = '!';
-			if (preg_match ($delimiter . "/\* (Success|Failure) (.{19}) by ([a-zA-Z0-9]+) \*/ (UPDATE|INSERT INTO) ([^.]+)\.([^ ]+) (.*)" . $delimiter, $change, $parts)) {
+			if (preg_match ($delimiter . "/\* (Success|Failure) (.{19}) by ([.@a-zA-Z0-9]+) \*/ (UPDATE|INSERT INTO) ([^.]+)\.([^ ]+) (.*)" . $delimiter, $change, $parts)) {
 				$nameMatch = array ();
 				// preg_match ($delimiter . ($parts[4] == 'UPDATE' ? "WHERE id='([a-z]+)';$" : "VALUES \('([a-z]+)',") . $delimiter, trim ($parts[7]), $nameMatch);
 				$changesHtml[] = "\n<h3 class=\"spaced\">[" . ($index + 1) . '] ' . ($parts[1] == 'Success' ? 'Successful' : 'Failed') . ' ' . ($parts[4] == 'UPDATE' ? 'update' : 'new submission') . (isSet ($nameMatch[1]) ? " made to <span class=\"warning\"><a href=\"{$this->baseUrl}/{$nameMatch[1]}/\">{$nameMatch[1]}</a></span>" : '') . ' by<br />' . $parts[3] . ' at ' . $parts[2] . ":</h3>\n<p>{$parts[4]} {$parts[5]}.{$parts[6]} " . htmlspecialchars ($parts[7]) . '</p>';
@@ -2767,6 +2777,9 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		if (preg_match ("~http://([^\s]+)$~i", trim ($unfinalisedData['message']))) {   // Message always ends with a link
 			$form->registerProblem ('antispam', 'Please remove web addresses from your submission.');
 		}
+	}
+	if (substr_count ($unfinalisedData['message'], 'Cryptaxbot')) {
+		$form->registerProblem ('antispam', 'Error.');
 	}
 }
 
@@ -3423,7 +3436,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		}
 		$templateHandle->assign ('templates_tpl', $tplDirectory);
 		
-		# Register plugin functions
+		# Register plugin functions, if any
 		foreach ($this->templateFunctions as $function) {
 			$templateHandle->registerPlugin ('modifier', $function, array ($this, $function));
 		}
