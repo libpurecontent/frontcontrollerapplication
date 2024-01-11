@@ -6,7 +6,7 @@
 
 
 # Front Controller pattern application
-# Version 1.11.2
+# Version 1.12.0
 class frontControllerApplication
 {
 	# Define global defaults
@@ -295,6 +295,12 @@ class frontControllerApplication
 		$mainApplicationClass = $classHierarchy[1];		// i.e. the direct child of frontControllerApplication
 		$reflector = new ReflectionClass ($mainApplicationClass);
 		$this->applicationRoot = dirname ($reflector->getFileName ());
+		
+		# Load the application directory's autoload if Composer-enabled
+		$autoloadFile = $this->applicationRoot . '/vendor/autoload.php';
+		if (file_exists ($autoloadFile)) {
+			require_once ($autoloadFile);
+		}
 		
 		# Obtain the defaults
 		$this->defaults = $this->assignDefaults ($settings);
