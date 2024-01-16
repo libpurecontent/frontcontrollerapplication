@@ -78,7 +78,6 @@ class frontControllerApplication
 			'minimumPhpVersion'								=> '5.1.0',	// PDO supported in 5.1 and above
 			'showChanges'									=> 25,		// Number of most recent changes to show in log file
 			'user'											=> false,	// Become this user
-			'form'											=> true,	// Whether to load ultimateForm
 			#!# Needs a formDiv setting, for setting the 'div' parameter of ultimateForm; this would also propagate to the sinenomine integration in editing()
 			'opening'										=> false,
 			'closing'										=> false,
@@ -282,9 +281,6 @@ class frontControllerApplication
 		# In CLI mode, e.g. for cron, emulate a webserver environment
 		$settings = $this->cliModeEmulation ($settings);
 		
-		# Load required libraries
-		require_once ('application.php');
-		
 		# Define the location of the stub launching file and the image store
 		$this->baseUrl = application::getBaseUrl ();
 		$this->imageStoreRoot = $_SERVER['DOCUMENT_ROOT'] . $this->baseUrl . '/images/';
@@ -295,12 +291,6 @@ class frontControllerApplication
 		$mainApplicationClass = $classHierarchy[1];		// i.e. the direct child of frontControllerApplication
 		$reflector = new ReflectionClass ($mainApplicationClass);
 		$this->applicationRoot = dirname ($reflector->getFileName ());
-		
-		# Load the application directory's autoload if Composer-enabled
-		$autoloadFile = $this->applicationRoot . '/vendor/autoload.php';
-		if (file_exists ($autoloadFile)) {
-			require_once ($autoloadFile);
-		}
 		
 		# Obtain the defaults
 		$this->defaults = $this->assignDefaults ($settings);
@@ -327,16 +317,6 @@ class frontControllerApplication
 					$this->settings['password'] = trim (file_get_contents ($this->settings['password']));
 				}
 			}
-		}
-		
-		# Load camUniData if required
-		if ($this->settings['useCamUniLookup']) {
-			require_once ('camUniData.php');
-		}
-		
-		# Load the form if required
-		if ($this->settings['form']) {
-			require_once ($this->settings['form'] === 'dev' ? 'ultimateForm-dev.php' : 'ultimateForm.php');
 		}
 		
 		# Obtain the house style files (header and footer)
@@ -383,7 +363,6 @@ class frontControllerApplication
 		
 		# If required, make connections to the database server and ensure the tables exist
 		if ($this->settings['useDatabase']) {
-			require_once ('database.php');
 			$this->databaseConnection = new database ($this->settings['hostname'], $this->settings['username'], $this->settings['password'], $this->settings['database'], $this->settings['vendor'], $this->settings['logfile'], $this->user /* If using internalAuth, set later */, $this->settings['nativeTypes']);
 			if (!$this->databaseConnection->connection) {
 				echo $this->databaseConnection->reportError ($this->settings['administratorEmail'], $this->settings['applicationName']);
@@ -1517,7 +1496,7 @@ class frontControllerApplication
 				# Limit to text fields only
 				if (in_array ($field['Type'], array ('text', 'tinytext', 'mediumtext', 'longtext'))) {
 					
-					# Exclude fields that look like richtext (HTML); this should match the defintion in the dataBinding function in ultimateForm.php, so that the developer can be sure that if a richtext field appears in the settings page, that it won't get exploded
+					# Exclude fields that look like richtext (HTML); this should match the defintion in the dataBinding function in ultimateForm, so that the developer can be sure that if a richtext field appears in the settings page, that it won't get exploded
 					if (!preg_match ('/(html|richtext)/i', $fieldname)) {
 						
 						# Split lines out
@@ -2004,7 +1983,6 @@ class frontControllerApplication
 		$html = '';
 		
 		# Create the form
-		require_once ('ultimateForm.php');
 		$form = new form (array (
 			'formCompleteText' => false,
 			'nullText' => false,
@@ -2253,7 +2231,6 @@ class frontControllerApplication
 		}
 		
 		# Obtain an array of all files in the directory or end
-		require_once ('directories.php');
 		if (!$files = directories::listFiles ($this->exportsDirectory, array (), true, $skipUnreadableFiles = true, $skipZeroLengthFiles = true)) {
 			$errorHtml = "\n<p class=\"warning\">There are no files uploaded yet.</p>";
 			return false;
@@ -2820,7 +2797,6 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		);
 		
 		# Load the user account system
-		require_once ('userAccount.php');
 		$this->internalAuthClass = new userAccount ($internalAuthSettings, $this->databaseConnection);
 	}
 	
@@ -3275,7 +3251,6 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		$settings = array_merge ($settings, $sinenomineExtraSettings);
 		
 		# Load and run the database editing
-		require_once ('sinenomine.php');
 		$sinenomine = new sinenomine ($settings, $this->databaseConnection);
 		
 		# Set constraints
@@ -3331,7 +3306,6 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		$settings = array_merge ($settings, $sinenomineExtraSettings);
 		
 		# Load and run the database editing
-		require_once ('sinenomine.php');
 		$sinenomine = new sinenomine ($settings, $this->databaseConnection);
 		
 		# Set constraints
@@ -3373,7 +3347,6 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		}
 		
 		# Create a form
-		require_once ('ultimateForm.php');
 		$form = new form (array (
 			'formCompleteText' => false,
 			'div' => 'ultimateform graybox',
@@ -3430,7 +3403,6 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		$this->settings['templatesDirectory'] = str_replace ('%applicationRoot', $this->applicationRoot, $this->settings['templatesDirectory']);
 		
 		# Load templating
-		require_once ('smarty/libs/Smarty.class.php');
 		$templateHandle = new Smarty ();
 		// $templateHandle->caching = 0;
 		// $templateHandle->force_compile = true;
@@ -3493,7 +3465,6 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		
 		# Get the list of templates or end
 		#!# Add support for nested directories
-		require_once ('directories.php');
 		if (!$templateFiles = directories::listFiles ($this->settings['templatesDirectory'], array ('tpl'), $directoryIsFromRoot = true)) {
 			$html .= "\n<p>There are no templates.</p>";
 			echo $html;
