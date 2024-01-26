@@ -277,6 +277,9 @@ class frontControllerApplication
 	# Constructor
 	public function __construct ($settings = array (), $disableAutoGui = false)
 	{
+		# Clean server globals
+		application::cleanServerGlobals ();
+		
 		# In CLI mode, e.g. for cron, emulate a webserver environment
 		$settings = $this->cliModeEmulation ($settings);
 		
