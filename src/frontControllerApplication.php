@@ -6,7 +6,6 @@
 
 
 # Front Controller pattern application
-# Version 1.12.0
 class frontControllerApplication
 {
 	# Define global defaults
