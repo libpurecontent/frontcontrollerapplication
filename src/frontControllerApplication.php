@@ -2009,7 +2009,7 @@ class frontControllerApplication
 	
 	
 	# Function to provide a general-purpose importing user interface
-	public function importUi ($baseFilenames, $importTypes = array ('full' => 'FULL import'), $fileCreationInstructionsHtml, $fileExtension = 'xml', $echoHtml = true)
+	public function importUi ($baseFilenames, $importTypes = array ('full' => 'FULL import'), $fileCreationInstructionsHtml = '<p>Save the data to a file on your computer (which you can delete later).</p>', $fileExtension = 'xml', $echoHtml = true)
 	{
 		# Allow long-running processes
 		ini_set ('max_execution_time', 0);
