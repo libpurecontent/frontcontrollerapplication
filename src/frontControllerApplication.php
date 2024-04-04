@@ -1855,7 +1855,8 @@ class frontControllerApplication
 		}
 		
 		# Send the data
-		header ('Content-type: application/json; charset=UTF-8');
+		header ('Content-Type: application/json; charset=UTF-8');
+		header ('Content-Length: ' . strlen ($json));
 		echo $json;
 	}
 	
