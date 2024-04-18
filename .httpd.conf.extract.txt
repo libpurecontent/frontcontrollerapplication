@@ -1,0 +1,98 @@
+# Apache macros for use by frontControllerApplication-based applications
+
+#!# Slash-termination needs to be made consistent and assume no /
+
+
+# Main macro to create the directives for a frontControllerApplication application, using Raven
+<Macro MacroFrontControllerApplication $baseUrl $description>
+
+	RewriteEngine on
+	RewriteRule ^$baseUrl(help|feedback|admin|administrators|history|settings|login|loginexternal|logoutexternal|loggedout|data).html$ $baseUrlindex.html?action=$1 [L,QSA]
+	RewriteRule ^$baseUrl(data)\.(json|xml)$ $baseUrlindex.html?action=$1 [L,QSA]
+	RewriteRule ^$baseUrl(profile)/$ $baseUrlindex.html?action=$1 [L]
+	RewriteRule ^$baseUrl(profile)$ $baseUrl$1/ [L,R=301]
+	RewriteRule ^$baseUrl(login/)$ $baseUrlindex.html?action=logininternal [L,QSA]
+	RewriteRule ^$baseUrl(login)$ $baseUrl$1/ [L,R=301]
+	RewriteRule ^$baseUrl(login/logout)/$ $baseUrlindex.html?action=logoutinternal [L,QSA]
+	RewriteRule ^$baseUrllogin/(register|resetpassword|accountdetails)/$ $baseUrlindex.html?action=$1 [L,QSA]
+	RewriteRule ^$baseUrllogin/(register|resetpassword|accountdetails|logout)$ $baseUrllogin/$1/ [L,R=301]
+	RewriteRule ^$baseUrllogin/(register|resetpassword)/([a-z0-9]{24})/$ $baseUrlindex.html?action=$1&token=$2 [L,QSA]
+	RewriteRule ^$baseUrllogin/(register|resetpassword)/([a-z0-9]{24})$ $baseUrllogin/$1/$2/ [L,R=301]
+	RewriteRule ^$baseUrl(api)/$ $baseUrlindex.html?action=apidocumentation [L,QSA]
+	RewriteRule ^$baseUrl(cron)/$ $baseUrlindex.html?action=cron [L,QSA]
+	RewriteRule ^$baseUrl(templates)/$ $baseUrlindex.html?action=templates [L,QSA]
+	RewriteRule ^$baseUrl(api|cron|templates)$ $baseUrl$1/ [L,R=301]
+	RewriteRule ^$baseUrl(templates)/([/a-z]+).html$ $baseUrlindex.html?action=$1&item=$2 [L,QSA]
+	# API calls
+	RewriteRule ^$baseUrl(api)/([.a-z]+)$ $baseUrlindex.html?action=$1&method=$2 [L,QSA]
+	RewriteRule ^$baseUrl(api)/([.a-z]+)/(.*)$ $baseUrlindex.html?action=$1&method=$2&id=$3 [L,QSA]
+	<Location $baseUrl>
+		AAAlwaysDecode On
+		php_value output_buffering 65536
+	</Location>
+	<LocationMatch $baseUrldata\.(html|json|xml)>
+		php_value auto_prepend_file none
+		php_value auto_append_file none
+	</LocationMatch>
+	<Location $baseUrllogin.html>
+		AuthType Ucam-WebAuth
+		AADescription "$description"
+		AAForceInteract On
+		Require valid-user
+	</Location>
+	<Location $baseUrllogout.html>
+		SetHandler AALogout
+		AALogoutMsg $baseUrlloggedout.html
+	</Location>
+	<Location $baseUrllogfile.txt>
+		Require all denied
+	</Location>
+	<LocationMatch $baseUrl(cron/|api/.+)>
+		Require all granted
+		php_value auto_prepend_file none
+		php_value auto_append_file none
+	</LocationMatch>
+	# Deprecated URLs - redirect to new
+	RewriteRule ^$baseUrl(logininternal).html$ $baseUrllogin/ [L,R=301]
+	RewriteRule ^$baseUrl(logoutinternal).html$ $baseUrllogin/logout/ [L,R=301]
+	RewriteRule ^$baseUrl(register|resetpassword).html$ $baseUrllogin/$1/ [L,R=301]
+
+	# Flag that general page editing is disabled within the application area
+	<Location $baseUrl>
+		SetEnv PURECONTENT_EDITING_DISABLED 1
+	</Location>
+
+</Macro>
+
+
+# Macro for an embedded sinenomine instantiation with rewriting, assuming the whole database is editable, as e.g. /applicationroot/editing/<tablename>/ with the database name being set in the embedding application
+<Macro MacroSinenomineEmbeddedWholeDb $applicationBaseUrl $editingUrl $applicationEditingAction>
+	RewriteEngine On
+	RewriteRule ^$applicationBaseUrl$editingUrl/$ $applicationBaseUrl/index.html?action=$applicationEditingAction [L,QSA]
+	RedirectMatch permanent ^$applicationBaseUrl$editingUrl$ $applicationBaseUrl$editingUrl/
+	RewriteRule ^$applicationBaseUrl$editingUrl/([^/]+)/$ $applicationBaseUrl/index.html?action=$applicationEditingAction&table=$1 [L,QSA]
+	RewriteRule ^$applicationBaseUrl$editingUrl/([^/]+)/(index|listing|add|export).html$ $applicationBaseUrl/index.html?action=$applicationEditingAction&table=$1&do=$2 [L,QSA]
+	RewriteRule ^$applicationBaseUrl$editingUrl/([^/]+)/(search).html$ $applicationBaseUrl/index.html?action=$applicationEditingAction&table=$1&do=$2 [L,QSA]
+	RewriteRule ^$applicationBaseUrl$editingUrl/([^/]+)/page([0-9]+).html$ $applicationBaseUrl/index.html?action=$applicationEditingAction&table=$1&page=$2 [L,QSA]
+	RewriteRule ^$applicationBaseUrl$editingUrl/([^/]+)/all.html$ $applicationBaseUrl/index.html?action=$applicationEditingAction&table=$1&page=all [L,QSA]
+	RedirectMatch Permanent ^$applicationBaseUrl$editingUrl/([^/]+)/([^/]+)$ $applicationBaseUrl/$1/$2/
+	RewriteRule ^$applicationBaseUrl$editingUrl/([^/]+)/([^/]+)/$ $applicationBaseUrl/index.html?action=$applicationEditingAction&table=$1&record=$2 [L]
+	RewriteRule ^$applicationBaseUrl$editingUrl/([^/]+)/([^/]+)/(index|edit|clone|delete).html$ $applicationBaseUrl/index.html?action=$applicationEditingAction&table=$1&record=$2&do=$3 [L]
+</Macro>
+
+
+# Macro for an embedded sinenomine instantiation with rewriting, for a table only, as e.g. /applicationroot/editing/<editingUrl>/ with the database name and table name being set in the embedding application
+<Macro MacroSinenomineEmbeddedTable $applicationBaseUrl $editingUrl $applicationAction>
+	RewriteEngine On
+	RewriteRule ^$applicationBaseUrl$editingUrl/$ $applicationBaseUrl/index.html?action=$applicationAction [L,QSA]
+	RedirectMatch permanent ^$applicationBaseUrl$editingUrl$ $applicationBaseUrl$editingUrl/
+	RewriteRule ^$applicationBaseUrl$editingUrl/(index|listing|export).html$ $applicationBaseUrl/index.html?action=$applicationAction&do=$1 [L]
+	RewriteRule ^$applicationBaseUrl$editingUrl/(add).html$ $applicationBaseUrl/index.html?action=$applicationAction&do=$1 [L]
+	RewriteRule ^$applicationBaseUrl$editingUrl/(search).html$ $applicationBaseUrl/index.html?action=$applicationAction&do=$1 [L,QSA]
+	RewriteRule ^$applicationBaseUrl$editingUrl/page([0-9]+).html$ $applicationBaseUrl/index.html?action=$applicationAction&page=$1 [L,QSA]
+	RewriteRule ^$applicationBaseUrl$editingUrl/all.html$ $applicationBaseUrl/index.html?action=$applicationAction&page=all [L,QSA]
+	RedirectMatch Permanent ^$applicationBaseUrl$editingUrl/([^/]+)$ $applicationBaseUrl$editingUrl/$1/
+	RewriteRule ^$applicationBaseUrl$editingUrl/([^/]+)/$ $applicationBaseUrl/index.html?action=$applicationAction&record=$1 [L]
+	RewriteRule ^$applicationBaseUrl$editingUrl/([^/]+)/(index|edit|clone|delete).html$ $applicationBaseUrl/index.html?action=$applicationAction&record=$1&do=$2 [L]
+</Macro>
+
