@@ -1096,6 +1096,7 @@ class frontControllerApplication
 	
 	
 	# Function to set up the database
+	#!# This needs to be improved to make regeneration or updated structure easier - e.g. the getTables check should not try to re-create built-ins like administrators
 	private function databaseSetup (&$html)
 	{
 		# Get the tables, or end if already present
