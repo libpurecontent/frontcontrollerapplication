@@ -216,6 +216,12 @@ class frontControllerApplication
 			'usetab' => 'home',
 			'authentication' => true,
 		),
+		'deleteaccount' => array (
+			'description' => 'Delete your account',
+			'url' => 'login/deleteaccount/',
+			'usetab' => 'home',
+			'authentication' => true,
+		),
 		'loggedout' => array (
 			'description' => 'Logged out',
 			'url' => 'loggedout.html',
@@ -1700,6 +1706,20 @@ class frontControllerApplication
 	{
 		# Log out and confirm this status
 		$this->internalAuthClass->accountdetails ();
+		
+		# Assemble the HTML
+		$html  = $this->internalAuthClass->getHtml ();
+		
+		# Show the HTML
+		echo $html;
+	}
+	
+	
+	# Delete account page
+	private function deleteaccount ()
+	{
+		# Log out and confirm this status
+		$this->internalAuthClass->deleteaccount ();
 		
 		# Assemble the HTML
 		$html  = $this->internalAuthClass->getHtml ();
