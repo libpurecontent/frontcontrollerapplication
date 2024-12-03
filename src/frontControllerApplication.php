@@ -2762,7 +2762,7 @@ class frontControllerApplication
 			'required'	=> true,
 			'cols'		=> 55,
 			'default' 	=> (isSet ($_GET['message']) ? $_GET['message'] : false),
-			'disallow'      => 'https?:/',
+			'disallow'	=> '(' . (isSet ($_SERVER['ANTI_SPAM_REGEXP']) ? $_SERVER['ANTI_SPAM_REGEXP'] . '|' : '') . 'https?:/' . ')',
 		));
 		$form->input (array (
 			'name'		=> 'name',
