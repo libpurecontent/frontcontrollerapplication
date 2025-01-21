@@ -95,6 +95,7 @@ class frontControllerApplication
 			'dataDirectory'									=> '/data/',	// Where / represents the root of the repository containing user data files
 			'itemCaseSensitive'								=> false,	// Whether an $item value fed to an action is case-sensitive; if not, it is converted to lower-case; #!# In future this will default to true
 			'corsDomains'									=> array (),	// Domains enabled for CORS headers
+			'recordErasureYears'							=> false,	// Years after which records will be completely erased from the database, e.g. for data protection compliance; false to retain all records
 			'importsSectionsMode'							=> false,	// Whether imports consist of a set of sections that all combine into one table and can be imported separately
 			'importLog'										=> false,	// Import log file (false or filename; %applicationRoot is supported), which will create importlog.txt in baseUrl
 			'useTemplating'									=> false,	// Whether to enable templating
@@ -461,6 +462,9 @@ class frontControllerApplication
 			}
 		}
 		
+		# Run periodic erasure of older records, if required
+		$this->recordErasure ();
+		
 		# Add user-switching UI control if required; this must be run after the $this->userIsAdministrator phase and after mainPreActions in case that sets required properties
 		if ($this->settings['userSwitcherUsers']) {
 			echo $this->userSwitcher ();
@@ -792,6 +796,21 @@ class frontControllerApplication
 		
 		# Return the modified settings
 		return $settings;
+	}
+	
+	
+	# Function to run periodic erasure of older records
+	private function recordErasure ()
+	{
+		# Only run if the feature is enabled
+		if (!$this->settings['recordErasureYears']) {return false;}
+		
+		# To avoid unnecessary database load, run only occasionally, on a random page hit
+		if (rand (1, 100) != 1) {return false;}
+		
+		# Erase all old records matching the record erasure years setting
+		$query = "DELETE FROM {$this->settings['table']} WHERE updatedAt < DATE_SUB(CURDATE(), INTERVAL {$this->settings['recordErasureYears']} YEAR);";
+		$this->databaseConnection->query ($query);
 	}
 	
 	
