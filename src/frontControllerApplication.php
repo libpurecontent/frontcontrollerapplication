@@ -1870,24 +1870,12 @@ class frontControllerApplication
 			$data = array ('error' => $error);
 		}
 		
-		# Determine if a JSON-P callback is required
-		$jsonpCallback = false;
-		if (isSet ($_GET['callback'])) {
-			$jsonpCallback = (strlen ($_GET['callback']) ? $_GET['callback'] : false);
-			unset ($_GET['callback']);      // Avoid leakage into the application environment
-		}
-		
 		# Encode the JSON
 		$flags = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
 		if ($this->settings['apiJsonPretty']) {
 			$flags = JSON_PRETTY_PRINT | $flags;
 		}
 		$json = json_encode ($data, $flags);	// Enable pretty-print; see: http://www.vinaysahni.com/best-practices-for-a-pragmatic-restful-api#pretty-print-gzip
-		
-		# If a callback is specified, convert to JSON-P; See http://www.php.net/json-encode#95667 and https://stackoverflow.com/questions/1678214
-		if ($jsonpCallback) {
-			$json = $jsonpCallback . '(' . $json . ');';
-		}
 		
 		# Send the data
 		header ('Content-Type: application/json; charset=UTF-8');
