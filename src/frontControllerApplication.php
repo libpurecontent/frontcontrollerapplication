@@ -1870,11 +1870,6 @@ class frontControllerApplication
 			$data = array ('error' => $error);
 		}
 		
-		# Compatibility for PHP<5.4 (while some servers still on PHP5.3)
-		if (!defined ('JSON_UNESCAPED_SLASHES')) {define ('JSON_UNESCAPED_SLASHES', 64);}
-		if (!defined ('JSON_PRETTY_PRINT')) {define ('JSON_PRETTY_PRINT', 128);}
-		if (!defined ('JSON_UNESCAPED_UNICODE')) {define ('JSON_UNESCAPED_UNICODE', 256);}
-		
 		# Determine if a JSON-P callback is required
 		$jsonpCallback = false;
 		if (isSet ($_GET['callback'])) {
