@@ -35,7 +35,7 @@ class frontControllerApplication
 			'password'										=> NULL,
 			#!# Consider a 'passwordFile' option that just contains the password, with other credentials specified normally and the username assumed to be the class name
 			'database'										=> NULL,
-			'databaseStrictWhere'							=> false,	// Whether automatically-constructed WHERE=... clauses do proper, exact comparisons, so that id="1 x" doesn't match against id value 1 in the database
+			'databaseStrictWhere'							=> false,	// Whether automatically-constructed WHERE=... clauses do proper, exact comparisons, so that id="1 x" doesn't match against id value 1 in the database; manual queries still need BINARY added or a _bin collation
 			'vendor'										=> 'mysql',	// Database vendor
 			'nativeTypes'									=> false,	// Whether to enable native types in the database (e.g. INT columns return values as int); a future release will change this to true
 			'installerUsername'								=> 'root',	// Username for database installer account
