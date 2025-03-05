@@ -1856,12 +1856,13 @@ class frontControllerApplication
 		# Initialise the API
 		if ($method = $this->loadApi ($apiCalls, $error)) {
 			
-			# Extract any ID
+			# Extract any ID and context (second) parameter
 			$id = (isSet ($_GET['id']) ? $_GET['id'] : NULL);
+			$context = (isSet ($_GET['context']) ? $_GET['context'] : NULL);	// Convenient provision for /api/<call>/id/some-context-value
 			
 			# Obtain the data (which may be empty) from the API calls function; error is returned by reference
 			$function = $apiCalls[$method];
-			$data = $apiClass->{$function} ($id, $error);	// i.e. uses class method defined as apiCall_foobar ($id, &$error = '')
+			$data = $apiClass->{$function} ($id, $error, $context);	// i.e. uses class method defined as apiCall_foobar ($id, &$error = '')
 		}
 		
 		# If an error occured, set the error as the output

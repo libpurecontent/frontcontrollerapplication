@@ -26,7 +26,8 @@
 	
 	# API calls
 	RewriteRule ^$baseUrl(api)/([.a-z]+)$ $baseUrlindex.html?action=$1&method=$2 [L,QSA]
-	RewriteRule ^$baseUrl(api)/([.a-z]+)/(.*)$ $baseUrlindex.html?action=$1&method=$2&id=$3 [L,QSA]
+	RewriteRule ^$baseUrl(api)/([.a-z]+)/([^/]*)$ $baseUrlindex.html?action=$1&method=$2&id=$3 [L,QSA]
+	RewriteRule ^$baseUrl(api)/([.a-z]+)/([^/]+)/([^/]*)$ $baseUrlindex.html?action=$1&method=$2&id=$3&context=$4 [L,QSA]
 	
 	# Auth
 	<Location $baseUrl>
