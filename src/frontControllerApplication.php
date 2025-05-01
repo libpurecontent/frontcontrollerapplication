@@ -64,7 +64,7 @@ class frontControllerApplication
 			'ravenResetPasswordUrl'							=> 'https://jackdaw.cam.ac.uk/get-raven-password/',
 			'ravenCentralLogoutUrl'							=> 'https://raven.cam.ac.uk/auth/logout.html',
 			'authFileGroup'									=> false,		// Whether to write an auth file containing the administrators, and if so, what group name (or true, which will allocate 'administrators')
-			'page404'										=> 'sitetech/404.html',	// Or false to use internal handler
+			'page404'										=> false,	// Or include_path path to custom page
 			'useAdmin'										=> true,
 			'revealAdminFunctions'							=> false,	// Whether to show admins-only tabs etc to non-administrators
 			'useFeedback'									=> true,
