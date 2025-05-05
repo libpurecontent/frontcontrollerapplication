@@ -15,7 +15,7 @@
         "libpurecontent/ultimateform": "^1.31",
         "libpurecontent/useraccount": "^1.9",
         "libpurecontent/directories": "^1.4",
-        "smarty/smarty": "^4.5.3",
+        "smarty/smarty": "^5.5",
         "camunigeography/camunidata": "^2.1",
         "libpurecontent/sinenomine": "^1.1"
     },
