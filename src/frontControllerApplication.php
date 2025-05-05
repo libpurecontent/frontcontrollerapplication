@@ -3212,7 +3212,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 				include ('sitetech/appended.html');
 			}
 		} else {
-			$html .= "\n<h2>Page not found</h2>";
+			$html .= "\n<h1>Page not found</h1>";
 			$html .= "\n<p>Sorry, that page was not found. Please check the URL or use the menu to navigate elsewhere.</p>";
 			echo $html;
 		}
