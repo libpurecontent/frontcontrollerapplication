@@ -3193,7 +3193,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 	
 	# 404 page
 	#!# Needs to have a customised message mode
-	public function page404 ($includePureContentHeaderFooter = false)
+	public function page404 ($includePureContentHeaderFooter = false, $headingLevel = 1)
 	{
 		# Start the HTML
 		$html = '';
@@ -3212,7 +3212,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 				include ('sitetech/appended.html');
 			}
 		} else {
-			$html .= "\n<h1>Page not found</h1>";
+			$html .= "\n<h{$headingLevel}>Page not found</h{$headingLevel}>";
 			$html .= "\n<p>Sorry, that page was not found. Please check the URL or use the menu to navigate elsewhere.</p>";
 			echo $html;
 		}
