@@ -3213,7 +3213,8 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 			}
 		} else {
 			$html .= "\n<h{$headingLevel}>Page not found</h{$headingLevel}>";
-			$html .= "\n<p>Sorry, that page was not found. Please check the URL or use the menu to navigate elsewhere.</p>";
+			$html .= "\n<p>Sorry, that page was not found.</p>";
+			$html .= "\n<p>Please check the URL or use the menu to navigate elsewhere.</p>";
 			echo $html;
 		}
 		
