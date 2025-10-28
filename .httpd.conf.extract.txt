@@ -66,11 +66,6 @@
 		Require all denied
 	</Location>
 	
-	# Deprecated URLs - redirect to new
-	RewriteRule ^$baseUrl(logininternal).html$ $baseUrllogin/ [L,R=301]
-	RewriteRule ^$baseUrl(logoutinternal).html$ $baseUrllogin/logout/ [L,R=301]
-	RewriteRule ^$baseUrl(register|resetpassword).html$ $baseUrllogin/$1/ [L,R=301]
-	
 	# Flag that general page editing is disabled within the application area
 	<Location $baseUrl>
 		SetEnv PURECONTENT_EDITING_DISABLED 1
