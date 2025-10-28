@@ -29,7 +29,7 @@
 	RewriteRule ^$baseUrl(api)/([.a-z]+)/([^/]*)$ $baseUrlindex.html?action=$1&method=$2&id=$3 [L,QSA]
 	RewriteRule ^$baseUrl(api)/([.a-z]+)/([^/]+)/([^/]*)$ $baseUrlindex.html?action=$1&method=$2&id=$3&context=$4 [L,QSA]
 	
-	# Auth
+	# Auth: always passively listen for auth, but require it on login page
 	<Location $baseUrl>
 		AAAlwaysDecode On
 	</Location>
