@@ -59,9 +59,9 @@ class frontControllerApplication
 			'directoryIndex'								=> 'index.html',					# The directory index, used for local file retrieval
 			'userAgent'										=> 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',	# The user-agent string used for external retrieval
 			'emailDomain'									=> 'cam.ac.uk',
-			'ravenGetPasswordUrl'							=> 'https://jackdaw.cam.ac.uk/get-raven-password/',
-			'ravenResetPasswordUrl'							=> 'https://jackdaw.cam.ac.uk/get-raven-password/',
-			'ravenCentralLogoutUrl'							=> 'https://raven.cam.ac.uk/auth/logout.html',
+			'ravenGetPasswordUrl'							=> 'https://help.uis.cam.ac.uk/service/accounts-passwords',
+			'ravenResetPasswordUrl'							=> 'https://help.uis.cam.ac.uk/service/accounts-passwords/password-reset',
+			'ravenCentralLogoutUrl'							=> 'https://support.microsoft.com/en-gb/authentication/signout',
 			'authFileGroup'									=> false,		// Whether to write an auth file containing the administrators, and if so, what group name (or true, which will allocate 'administrators')
 			'page404'										=> false,	// Or include_path path to custom page
 			'useAdmin'										=> true,
@@ -2433,7 +2433,7 @@ class frontControllerApplication
 		$html .= "\n" . "<p>Various security and auditing mechanisms are in place. " . ($_SERVER['_SERVER_PROTOCOL_TYPE'] == 'http' ? "Submissions are sent using HTTP as the server does not currently have an SSL certificate, although the Raven authentication stage is transmitted using HTTPS." : 'Submissions are encrypted using HTTPS.') . " Please <a href=\"{$this->baseUrl}/feedback.html\">contact us</a> if you have any questions on security.</p>";
 		$html .= "\n" . '<p>Attempts to add Javascript or HTML tags to submitted data will fail.</p>';
 		$html .= "\n" . '<h3 id="lookup">How do we pre-fill your name in some webforms?</h3>';
-		$html .= "\n" . '<p>If you are logged in via Raven, we use the University\'s <a href="http://www.lookup.cam.ac.uk/" target="_blank">lookup service</a> to obtain then pre-fill your name as a time-saving courtesy.</p>';
+		$html .= "\n" . '<p>If you are logged in via Raven, we use the University\'s <a href="https://www.lookup.cam.ac.uk/" target="_blank">lookup service</a> to obtain then pre-fill your name as a time-saving courtesy.</p>';
 		$html .= "\n" . '<h3 id="dataprotection">Data protection</h3>';
 		$html .= "\n" . '<p>All data is stored in accordance with the Data Protection Act, and data submitted through this system will not be passed on to third parties.</p>';
 		$html .= "\n" . '<h3 id="contacts">Any further questions?</h3>';
