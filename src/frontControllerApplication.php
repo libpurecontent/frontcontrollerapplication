@@ -57,8 +57,7 @@ class frontControllerApplication
 			'feedbackRecipient'								=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),	#!# This ought to be the value of administratorEmail by default
 			'useCamUniLookup'								=> true,
 			'directoryIndex'								=> 'index.html',					# The directory index, used for local file retrieval
-			#!# Needs updating
-			'userAgent'										=> 'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)',	# The user-agent string used for external retrieval
+			'userAgent'										=> 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',	# The user-agent string used for external retrieval
 			'emailDomain'									=> 'cam.ac.uk',
 			'ravenGetPasswordUrl'							=> 'https://jackdaw.cam.ac.uk/get-raven-password/',
 			'ravenResetPasswordUrl'							=> 'https://jackdaw.cam.ac.uk/get-raven-password/',
