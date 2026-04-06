@@ -21,6 +21,7 @@ class frontControllerApplication
 			'internalAuth'									=> false,		// Allow internal authentication/authorisation
 			'internalAuthSalt'								=> '%_salt',	// Salt used for internalAuth; should be set if using internalAuth
 			'internalAuthPasswordRequiresLettersAndNumbers'	=> true,	// Whether the internal auth password requires both letters and numbers
+			'loginMessageHtml'								=> false,		// Extra message for login page, e.g. to clarify what type of account needed, etc.
 			'authLinkVisibility'							=> true,		// Whether the auth link is visible (true/false or regexp for matching REMOTE_ADDR)
 			'minimumPasswordLength'							=> 4,			// Minimum password length when using externalAuth
 			'h1'											=> false,		// NB an empty string will remove <h1>..</h1> altogether
@@ -633,6 +634,9 @@ class frontControllerApplication
 				if ($this->settings['externalAuth']) {$loginTextLink = "log in using [<a href=\"{$loginUrl}?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]";}
 				if ($this->settings['internalAuth']) {$loginTextLink = "<a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\">log in</a> (or <a href=\"{$this->baseUrl}/{$this->actions['register']['url']}\">create an account</a>)";}
 				echo "\n<p><strong>Please " . $loginTextLink . " so that you can " . ($this->actions[$this->action]['description'] ? htmlspecialchars (strtolower (strip_tags ($this->actions[$this->action]['description']))) : 'use this facility') . '.</strong></p>';
+				if ($this->settings['loginMessageHtml']) {
+					echo "\n" . $this->settings['loginMessageHtml'];
+				}
 				if (!$this->settings['internalAuth']) {
 					echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on Raven accounts</a> is available.)</p>";
 				}
