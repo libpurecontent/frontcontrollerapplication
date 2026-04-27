@@ -635,7 +635,7 @@ class frontControllerApplication
 				if ($this->settings['internalAuth']) {$loginTextLink = "<a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\">log in</a> (or <a href=\"{$this->baseUrl}/{$this->actions['register']['url']}\">create an account</a>)";}
 				echo "\n<p><strong>Please " . $loginTextLink . " so that you can " . ($this->actions[$this->action]['description'] ? htmlspecialchars (strtolower (strip_tags ($this->actions[$this->action]['description']))) : 'use this facility') . '.</strong></p>';
 				if ($this->settings['loginMessageHtml']) {
-					echo "\n" . $this->settings['loginMessageHtml'];
+					echo "\n<br />" . $this->settings['loginMessageHtml'];
 				}
 				if (!$this->settings['internalAuth']) {
 					echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on Raven accounts</a> is available.)</p>";
@@ -2824,6 +2824,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 			'applicationName'					=> $this->settings['applicationName'],
 			'administratorEmail'				=> $this->settings['administratorEmail'],
 			'passwordRequiresLettersAndNumbers'	=> $this->settings['internalAuthPasswordRequiresLettersAndNumbers'],
+			'loginMessageHtml'					=> $this->settings['loginMessageHtml'],
 		);
 		
 		# Load the user account system

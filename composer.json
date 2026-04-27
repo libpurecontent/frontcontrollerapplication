@@ -13,7 +13,7 @@
         "libpurecontent/application": "^1.9",
         "libpurecontent/database": "^4.2",
         "libpurecontent/ultimateform": "^1.31",
-        "libpurecontent/useraccount": "^1.9",
+        "libpurecontent/useraccount": "^1.9.2",
         "libpurecontent/directories": "^1.4",
         "smarty/smarty": "^5.7",
         "camunigeography/camunidata": "^2.1",
