@@ -3435,7 +3435,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		$this->settings['templatesDirectory'] = str_replace ('%applicationRoot', $this->applicationRoot, $this->settings['templatesDirectory']);
 		
 		# Load templating
-		$templateHandle = new Smarty ();
+		$templateHandle = new Smarty\Smarty ();
 		// $templateHandle->caching = 0;
 		// $templateHandle->force_compile = true;
 		$templateHandle->setTemplateDir ($this->settings['templatesDirectory']);
