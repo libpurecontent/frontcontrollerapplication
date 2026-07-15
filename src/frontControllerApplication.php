@@ -9,18 +9,18 @@
 class frontControllerApplication
 {
 	# Class properties
-	private $baseUrl;
-	private $imageStoreRoot;
-	private $applicationRoot;
-	private $settings;
-	private $lockfile;
-	private $importLog;
-	private $dataUrl;
-	private $footerMessage;
-	private $user;
-	private $databaseConnection;
-	private $dataSource;
-	private $homeUrlVisible;
+	protected $baseUrl;
+	protected $imageStoreRoot;
+	protected $applicationRoot;
+	protected $settings;
+	protected $lockfile;
+	protected $importLog;
+	protected $dataUrl;
+	protected $footerMessage;
+	protected $user;
+	protected $databaseConnection;
+	protected $dataSource;
+	protected $homeUrlVisible;
 	
 	
 	# Define global defaults
