@@ -8,6 +8,21 @@
 # Front Controller pattern application
 class frontControllerApplication
 {
+	# Class properties
+	private $baseUrl;
+	private $imageStoreRoot;
+	private $applicationRoot;
+	private $settings;
+	private $lockfile;
+	private $importLog;
+	private $dataUrl;
+	private $footerMessage;
+	private $user;
+	private $databaseConnection;
+	private $dataSource;
+	private $homeUrlVisible;
+	
+	
 	# Define global defaults
 	private function globalDefaults ()
 	{
