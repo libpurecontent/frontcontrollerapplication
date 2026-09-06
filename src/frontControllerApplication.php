@@ -634,7 +634,7 @@ class frontControllerApplication
 		# Show login status
 		#!# Should have urlencode also?
 		$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: http://stackoverflow.com/questions/940905
-		$this->ravenUser = !substr_count ($this->user, '@');
+		$this->ravenUser = ($this->user ? !substr_count ($this->user, '@') : NULL);
 		$loginUrl = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/login/' : $this->baseUrl . '/login.html');
 		$logoutUrl = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/logout/' : $this->baseUrl . '/logout.html');
 		$loginTextLink = "You are not currently <a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">logged in</a>";
