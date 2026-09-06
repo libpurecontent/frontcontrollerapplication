@@ -80,6 +80,7 @@ class frontControllerApplication
 			'peopleDatabase'								=> 'people',
 			'table'											=> NULL,
 			'administrators'								=> false,	// Administrators table e.g. 'administrators' or 'facility.administrators', or an array of usernames; true will use the default, 'administrators'
+			'autoAction'									=> false,	// Instead of defining every action, always run an autoAction function defined in client code
 			'settingsTable'									=> 'settings',	// Settings table (must be in the main database) e.g. 'settings' or false to disable (only needed a table of that name is present for a different purpose)
 			'settingsTableExplodeTextarea'					=> false,	// Whether to split textarea columns in a settings table into an array of values - true/false, or an array of fieldnames which should have this applied to
 			'settingsTableExplodeTextareaPairs'				=> false,	// Whether to split textarea columns in a settings table into key-value pairs (assuming a,b lines), or an array of fieldnames which should have this applied to; this assumes settingsTableExplodeTextarea is enabled
@@ -927,7 +928,14 @@ class frontControllerApplication
 	# Function to perform the action
 	private function performAction ($action, $item)
 	{
-		# Perform the action
+		# In auto-action mode, always run a supplied autoAction function
+		if ($this->settings['autoAction']) {
+			if (array_key_exists ($action, $localActions)) {	// Only apply to locally-defined actions
+				$action = 'autoAction';
+			}
+		}
+		
+		# Perform the action (normal mode)
 		$this->$action ($item);
 	}
 	
