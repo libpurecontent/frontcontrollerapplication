@@ -21,6 +21,26 @@ class frontControllerApplication
 	protected $databaseConnection;
 	protected $dataSource;
 	protected $homeUrlVisible;
+	protected $action;
+	protected $userVisibleIdentifier;
+	protected $userEmail;
+	protected $administrators;
+	protected $userIsAdministrator;
+	protected $enableSettingsSubtab;
+	protected $enableProfileTab;
+	protected $profile;
+	protected $restrictedAdministrator;
+	protected $item;
+	protected $exportType;
+	protected $parentAction;
+	protected $isParentAction;
+	protected $ravenUser;
+	protected $userName;
+	protected $userPhone;
+	protected $year;
+	protected $templateHandle;
+	protected $doAction;
+	
 	
 	
 	# Define global defaults
