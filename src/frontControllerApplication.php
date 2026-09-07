@@ -124,7 +124,7 @@ class frontControllerApplication
 			'mkdirPermissions'								=> 0755,	// Permissions for mkdir calls; the default here is standard Unix
 			'chmodPermissions'								=> 0644,	// Permissions for chmod calls; the default here is standard Unix
 			'editingPagination'								=> 250,		// Pagination when editing the embedded record editor
-			'cronUsername'									=> false,	// HTTP username required for cron jobs
+			'cronUsername'									=> false,	// HTTP username required for cron jobs; #!# Currently cronUsername HAS to be supplied in the boostrap file and not the client class's defaults as cliModeEmulation is called too early
 			'apiUsername'									=> false,	// HTTP username required for API calls, or true for open access
 			'apiJsonPretty'									=> true,	// Whether to use pretty printing for JSON output
 			'applicationStylesheet'							=> '/styles.css',	// Where / represents the root of the repository containing the application
@@ -930,6 +930,7 @@ class frontControllerApplication
 	{
 		# In auto-action mode, always run a supplied autoAction function
 		if ($this->settings['autoAction']) {
+			$localActions = $this->actions ();
 			if (array_key_exists ($action, $localActions)) {	// Only apply to locally-defined actions
 				$action = 'autoAction';
 			}
