@@ -3490,6 +3490,9 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		}
 		$templateHandle->assign ('templates_tpl', $tplDirectory);
 		
+		# Assign necessary but omitted functions
+		$templateHandle->registerPlugin ('modifier', 'ucfirst', 'ucfirst');
+		
 		# Register plugin functions, if any
 		foreach ($this->templateFunctions as $function) {
 			$templateHandle->registerPlugin ('modifier', $function, array ($this, $function));
