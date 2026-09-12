@@ -11,13 +11,13 @@
     ],
     "require": {
         "libpurecontent/application": "^1.9",
-        "libpurecontent/database": "^4.2",
+        "libpurecontent/database": "^4.3",
         "libpurecontent/ultimateform": "^1.31",
         "libpurecontent/useraccount": "^1.12",
         "libpurecontent/directories": "^1.4",
         "smarty/smarty": "^5.8",
         "camunigeography/camunidata": "^2.1",
-        "libpurecontent/sinenomine": "^1.1"
+        "libpurecontent/sinenomine": "^1.2"
     },
     "autoload": {
         "psr-0": {"frontControllerApplication": "src/"}
