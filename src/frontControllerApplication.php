@@ -634,17 +634,27 @@ class frontControllerApplication
 			$authLinkVisibility = (preg_match ($delimiter . addcslashes ($this->settings['authLinkVisibility'], $delimiter) . $delimiter, gethostbyaddr ($_SERVER['REMOTE_ADDR'])));
 		}
 		
-		# Show login status
-		#!# Should have urlencode also?
-		$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: http://stackoverflow.com/questions/940905
+		# Determine if a Raven user (i.e. federated Identity Provider login, rather than the built-in authentication/authorisation system using passwords and local database)
 		$this->ravenUser = ($this->user ? !substr_count ($this->user, '@') : NULL);
-		$loginUrl = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/login/' : $this->baseUrl . '/login.html');
+		
+		# Determine login/logout URLs
+		#!# Should have urlencode also?
+		$loginUrl  = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/login/'  : $this->baseUrl . '/login.html');
 		$logoutUrl = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/logout/' : $this->baseUrl . '/logout.html');
-		$loginTextLink = "You are not currently <a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">logged in</a>";
-		if (!$this->ravenUser) {$logoutUrl = $this->baseUrl . '/logoutexternal.html';}
-		if ($this->settings['externalAuth']) {$loginTextLink = "You are not currently logged in using [<a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\" rel=\"nofollow\">Friends login</a>]";}
+		if (!$this->ravenUser) {
+			$logoutUrl = $this->baseUrl . '/logoutexternal.html';
+		}
 		if ($this->settings['internalAuth']) {
 			$logoutUrl = $this->baseUrl . '/' . $this->actions['logoutinternal']['url'];
+		}
+		
+		# Show login status
+		$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: http://stackoverflow.com/questions/940905
+		$loginTextLink = "You are not currently <a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">logged in</a>";
+		if ($this->settings['externalAuth']) {
+			$loginTextLink = "You are not currently logged in using [<a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\" rel=\"nofollow\">Friends login</a>]";
+		}
+		if ($this->settings['internalAuth']) {
 			$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\" rel=\"nofollow\">logged in</a>";
 		}
 		if ($authLinkVisibility) {
