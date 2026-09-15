@@ -581,10 +581,11 @@ class frontControllerApplication
 			}
 		}
 		
-		# Default to home if no valid action selected
-		#!# Should show 404 - this will happen if a query string is set up but the action itself isn't registered
+		# End if no valid action selected
 		if (!$this->action || !array_key_exists ($this->action, $this->actions)) {
-			$this->action = 'home';
+			$this->page404 ();
+			echo $footer;
+			return false;
 		}
 		
 		# Determine if a header logo (assumed to be relative to baseUrl) is to be used, and if so assemble the HTML
