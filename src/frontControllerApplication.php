@@ -320,6 +320,9 @@ class frontControllerApplication
 	# Constructor
 	public function __construct ($settings = array (), $disableAutoGui = false)
 	{
+		# Report all errors and warnings
+		error_reporting (E_ALL);
+		
 		# Clean server globals
 		application::cleanServerGlobals ();
 		
@@ -427,9 +430,6 @@ class frontControllerApplication
 		
 		# Define the user_agent string for downloading pages (some sites may refuse '-' or 'PHP' etc.)
 		ini_set ('user_agent', $this->settings['userAgent']);
-		
-		# Set PHP parameters
-		ini_set ('error_reporting', 2047);
 		
 		# Get the action
 		$this->action = (isSet ($_GET['action']) ? $_GET['action'] : 'home');
