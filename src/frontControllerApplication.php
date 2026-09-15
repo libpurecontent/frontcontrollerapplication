@@ -53,9 +53,10 @@ class frontControllerApplication
 			'authentication' 								=> false,		// Whether all pages require authentication
 			'dataDisableAuth'								=> false,		// Whether to disable auth on the data function (only relevant when using authentication=true); this can cause logout due to fast cookie transfer
 			'externalAuth'									=> false,		// Allow external authentication/authorisation
-			'internalAuth'									=> false,		// Allow internal authentication/authorisation
+			#!# Rename to localAuth for clarity, as internalAuth allows registration by external people
+			'internalAuth'									=> false,		// Enable the built-in authentication/authorisation system using passwords and a local database, rather than the default federated Identity Provider logins
 			'internalAuthSalt'								=> '%_salt',	// Salt used for internalAuth; should be set if using internalAuth
-			'internalAuthPasswordRequiresLettersAndNumbers'	=> true,	// Whether the internal auth password requires both letters and numbers
+			'internalAuthPasswordRequiresLettersAndNumbers'	=> true,		// Whether the internal auth password requires both letters and numbers
 			'loginMessageHtml'								=> false,		// Extra message for login page, e.g. to clarify what type of account needed, etc.
 			'authLinkVisibility'							=> true,		// Whether the auth link is visible (true/false or regexp for matching REMOTE_ADDR)
 			'minimumPasswordLength'							=> 4,			// Minimum password length when using externalAuth
@@ -65,7 +66,7 @@ class frontControllerApplication
 			'guiLocationAbsolute'							=> false,
 			'headerLogo'									=> false,		// Image for a header instead of the application name
 			'useDatabase'									=> true,
-			'credentials'									=> false,	// Filename of credentials file, which results in hostname/username/password/database being ignored
+			'credentials'									=> false,		// Filename of credentials file, which results in hostname/username/password/database being ignored
 			'hostname'										=> 'localhost',
 			'username'										=> NULL,
 			'password'										=> NULL,
@@ -227,33 +228,33 @@ class frontControllerApplication
 			'url' => 'logoutexternal.html',
 			'usetab' => 'home',
 		),
-		'logininternal' => array (
+		'logininternal' => array (		// Enabled only for the built-in authentication/authorisation system using passwords and local database
 			'description' => 'Login',
 			'url' => 'login/',
 			'usetab' => 'home',
 		),
-		'logoutinternal' => array (
+		'logoutinternal' => array (		// Enabled only for the built-in authentication/authorisation system using passwords and local database
 			'description' => 'Logout',
 			'url' => 'login/logout/',
 			'usetab' => 'home',
 		),
-		'register' => array (
+		'register' => array (		// Enabled only for the built-in authentication/authorisation system using passwords and local database
 			'description' => 'Create a new account',
 			'url' => 'login/register/',
 			'usetab' => 'home',
 		),
-		'resetpassword' => array (
+		'resetpassword' => array (		// Enabled only for the built-in authentication/authorisation system using passwords and local database
 			'description' => 'Reset a forgotten password',
 			'url' => 'login/resetpassword/',
 			'usetab' => 'home',
 		),
-		'accountdetails' => array (
+		'accountdetails' => array (		// Enabled only for the built-in authentication/authorisation system using passwords and local database
 			'description' => 'Change login account details',
 			'url' => 'login/accountdetails/',
 			'usetab' => 'home',
 			'authentication' => true,
 		),
-		'deleteaccount' => array (
+		'deleteaccount' => array (		// Enabled only for the built-in authentication/authorisation system using passwords and local database
 			'description' => 'Delete your account',
 			'url' => 'login/deleteaccount/',
 			'usetab' => 'home',
