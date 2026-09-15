@@ -648,17 +648,9 @@ class frontControllerApplication
 			$logoutUrl = $this->baseUrl . '/' . $this->actions['logoutinternal']['url'];
 		}
 		
-		# Show login status
-		$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: http://stackoverflow.com/questions/940905
-		$loginTextLink = "You are not currently <a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">logged in</a>";
-		if ($this->settings['externalAuth']) {
-			$loginTextLink = "You are not currently logged in using [<a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\" rel=\"nofollow\">Friends login</a>]";
-		}
-		if ($this->settings['internalAuth']) {
-			$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\" rel=\"nofollow\">logged in</a>";
-		}
+		# Add login status to header, if set to be visible
 		if ($authLinkVisibility) {
-			$headerHtml = '<p class="loggedinas noprint"' . ($authLimited ? ' title="[The login system is not visible to all users]"' : '') . '>' . ($this->user ? 'You are logged in as: <strong>' . $this->userVisibleIdentifier . ($this->userIsAdministrator ? ' (ADMIN)' : ($this->userStatus ? " ({$this->userStatus})" : '')) . '</strong> [<a href="' . $logoutUrl . "?{$location}\" class=\"logout\" rel=\"nofollow\">log out</a>]" : $loginTextLink) . '</p>' . $headerHtml;
+			$headerHtml = $this->loggedInAsHtml ($loginUrl, $logoutUrl, $authLimited) . $headerHtml;
 		}
 		
 		# Show the header/tabs
@@ -677,6 +669,7 @@ class frontControllerApplication
 			if ($this->settings['dataDisableAuth']) {$pagesNeverRequiringAuthentication[] = 'data';}
 			if ($this->settings['apiUsername']) {$pagesNeverRequiringAuthentication[] = 'api';}
 			if (!in_array ($this->action, $pagesNeverRequiringAuthentication)) {
+				$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: https://stackoverflow.com/questions/940905
 				if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
 				$loginTextLink = "<a href=\"{$loginUrl}?{$location}\" tabindex=\"1\">log in (using Raven)</a>";
 				if ($this->settings['externalAuth']) {$loginTextLink = "log in using [<a href=\"{$loginUrl}?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]";}
@@ -1700,6 +1693,47 @@ class frontControllerApplication
 		
 		# End
 		return true;
+	}
+	
+	
+	# Function to format the login status indicator
+	private function loggedInAsHtml ($loginUrl, $logoutUrl, $authLimited)
+	{
+		# Start paragraph
+		$html  = '<p class="loggedinas noprint"' . ($authLimited ? ' title="[The login system is not visible to all users]"' : '') . '>';
+		
+		# Location should always be written with entities converted
+		$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: https://stackoverflow.com/questions/940905
+		
+		# If logged in, show details, including status such as admin or a custom status, plus logout link
+		if ($this->user) {
+			$html .= 'You are logged in as: <strong>';
+			$html .= $this->userVisibleIdentifier;
+			if ($this->userIsAdministrator) {
+				$html .= ' (ADMIN)';
+			} else if ($this->userStatus) {
+				$html .= " ({$this->userStatus})";
+			}
+			$html .= '</strong>';
+			$html .= ' [<a href="' . $logoutUrl . "?{$location}\" class=\"logout\" rel=\"nofollow\">log out</a>]";
+			
+		# Otherwise, if not logged in, give login links
+		} else {
+			$loginTextLink = "You are not currently <a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">logged in</a>";
+			if ($this->settings['externalAuth']) {
+				$loginTextLink = "You are not currently logged in using [<a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\" rel=\"nofollow\">Friends login</a>]";
+			}
+			if ($this->settings['internalAuth']) {
+				$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\" rel=\"nofollow\">logged in</a>";
+			}
+			$html .= $loginTextLink;
+		}
+		
+		# End paragraph
+		$html .= '</p>';
+		
+		# Return the HTML
+		return $html;
 	}
 	
 	
