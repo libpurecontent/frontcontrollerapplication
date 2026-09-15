@@ -212,7 +212,7 @@ class frontControllerApplication
 			'subtab' => 'History',
 			'restrictedAdministrator' => true,
 		),
-		'login' => array (
+		'login' => array (		// This exists as a URL, but is never actually run as a page, and has no login () page function, because login requirement is intercepted earlier by the controller logic
 			'description' => 'Login',
 			'url' => 'login.html',
 			'usetab' => 'home',
@@ -618,7 +618,7 @@ class frontControllerApplication
 		}
 		
 		# Redirect to the page requested if necessary
-		if (!$this->login ()) {
+		if (!$this->loginLogic ()) {
 			echo $endDiv;
 			echo $footer;
 			return false;
@@ -1651,8 +1651,8 @@ class frontControllerApplication
 	}
 	
 	
-	# Login function
-	private function login ($method = 'login')
+	# Login logic function, determining whether the user is logged in or not, and if not, redirecting accordingly or showing the login page
+	private function loginLogic ($method = 'login')
 	{
 		# Start the HTML
 		$html = '';
@@ -1678,6 +1678,7 @@ class frontControllerApplication
 			if (substr_count ($_SERVER['QUERY_STRING'], "action={$method}&/")) {
 				$location = '/' . str_replace ("action={$method}&/", '', $_SERVER['QUERY_STRING']);
 			}
+		
 			#!# This isn't actually needed by the logininternal implementation, as that handles redirects itself
 			header ('Location: ' . $_SERVER['_SITE_URL'] . $location);
 			return false;
@@ -1692,7 +1693,7 @@ class frontControllerApplication
 	private function loginexternal ()
 	{
 		# Pass on
-		return $this->login (__FUNCTION__);
+		return $this->loginLogic (__FUNCTION__);
 	}
 	
 	
