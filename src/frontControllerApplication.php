@@ -1060,7 +1060,9 @@ class frontControllerApplication
 			unset ($actions['logininternal']);
 			unset ($actions['logoutinternal']);
 			unset ($actions['register']);
-			unset ($actions['reset']);
+			unset ($actions['resetpassword']);
+			unset ($actions['accountdetails']);
+			unset ($actions['deleteaccount']);
 		}
 		
 		# Return the actions
