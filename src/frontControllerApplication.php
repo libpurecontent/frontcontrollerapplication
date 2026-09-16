@@ -94,9 +94,9 @@ class frontControllerApplication
 			'directoryIndex'								=> 'index.html',					# The directory index, used for local file retrieval
 			'userAgent'										=> 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',	# The user-agent string used for external retrieval
 			'emailDomain'									=> 'cam.ac.uk',
-			'ravenGetPasswordUrl'							=> 'https://help.uis.cam.ac.uk/service/accounts-passwords',
-			'ravenResetPasswordUrl'							=> 'https://help.uis.cam.ac.uk/service/accounts-passwords/password-reset',
-			'ravenCentralLogoutUrl'							=> 'https://support.microsoft.com/en-gb/authentication/signout',
+			'idpGetPasswordUrl'								=> 'https://help.uis.cam.ac.uk/service/accounts-passwords',
+			'idpResetPasswordUrl'							=> 'https://help.uis.cam.ac.uk/service/accounts-passwords/password-reset',
+			'idpCentralLogoutUrl'							=> 'https://support.microsoft.com/en-gb/authentication/signout',
 			'authFileGroup'									=> false,		// Whether to write an auth file containing the administrators, and if so, what group name (or true, which will allocate 'administrators')
 			'page404'										=> false,	// Or include_path path to custom page
 			'useAdmin'										=> true,
@@ -2482,7 +2482,7 @@ class frontControllerApplication
 		echo '
 		<p>You have logged out of Raven for this site.</p>
 		<p>If you have finished browsing, then you should completely exit your web browser. This is the best way to prevent others from accessing your personal information and visiting web sites using your identity.</p>
-		<p>If for any reason you can\'t exit your browser you should first log-out of all other personalised sites that you have accessed and then <a href="' . $this->settings['ravenCentralLogoutUrl'] . '" target="_blank">logout from the central authentication service</a>.</p>';
+		<p>If for any reason you can\'t exit your browser you should first log-out of all other personalised sites that you have accessed and then <a href="' . $this->settings['idpCentralLogoutUrl'] . '" target="_blank">logout from the central authentication service</a>.</p>';
 	}
 	
 	
@@ -2491,8 +2491,8 @@ class frontControllerApplication
 	{
 		# Construct the help text
 		$html  = "\n" . '<h3 id="updating">User accounts - Raven authentication</h3>';
-		$html .= "\n" . '<p>To make changes, a Raven password is required for security. You can <a href="' . $this->settings['ravenGetPasswordUrl'] . '" target="_blank">obtain your Raven password</a> from the University Computing Service immediately if you do not yet have it.</p>';
-		$html .= "\n" . '<p>If you have <strong>forgotten</strong> your Raven password, you will need to <a href="' . $this->settings['ravenResetPasswordUrl'] . '" target="_blank">request a new one</a> from the central University Computing Service.</p>';
+		$html .= "\n" . '<p>To make changes, a Raven password is required for security. You can <a href="' . $this->settings['idpGetPasswordUrl'] . '" target="_blank">obtain your Raven password</a> from the University Computing Service immediately if you do not yet have it.</p>';
+		$html .= "\n" . '<p>If you have <strong>forgotten</strong> your Raven password, you will need to <a href="' . $this->settings['idpResetPasswordUrl'] . '" target="_blank">request a new one</a> from the central University Computing Service.</p>';
 		$html .= "\n" . '<h3 id="security">Security</h3>';
 		$html .= "\n" . "<p>Various security and auditing mechanisms are in place. " . ($_SERVER['_SERVER_PROTOCOL_TYPE'] == 'http' ? "Submissions are sent using HTTP as the server does not currently have an SSL certificate, although the Raven authentication stage is transmitted using HTTPS." : 'Submissions are encrypted using HTTPS.') . " Please <a href=\"{$this->baseUrl}/feedback.html\">contact us</a> if you have any questions on security.</p>";
 		$html .= "\n" . '<p>Attempts to add Javascript or HTML tags to submitted data will fail.</p>';
