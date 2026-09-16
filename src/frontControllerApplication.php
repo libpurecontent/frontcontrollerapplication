@@ -59,7 +59,7 @@ class frontControllerApplication
 			'internalAuthPasswordRequiresLettersAndNumbers'	=> true,		// Whether the internal auth password requires both letters and numbers
 			'loginMessageHtml'								=> false,		// Extra message for login page, e.g. to clarify what type of account needed, etc.
 			'authLinkVisibility'							=> true,		// Whether the auth link is visible (true/false or regexp for matching REMOTE_ADDR)
-			'minimumPasswordLength'							=> 4,			// Minimum password length when using externalAuth
+			'minimumPasswordLength'							=> 12,			// Minimum password length when using externalAuth; ensures compliance with Cyber Essentials Basic (UK)
 			'h1'											=> false,		// NB an empty string will remove <h1>..</h1> altogether
 			'headerLocation'								=> false,		// GUI header, if local loading needed
 			'footerLocation'								=> false,		// GUI footer, if local loading needed
