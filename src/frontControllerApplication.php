@@ -290,7 +290,7 @@ class frontControllerApplication
 	private $userStatus = false;
 	
 	# Internal auth implementation, using libpurecontent/useraccount
-	var $localAuthClass = NULL;
+	private $localAuthClass = NULL;
 	
 	# Define common text
 	protected $cross = '<img src="/images/icons/cross.png" alt="Cross" class="icon" />';
