@@ -94,6 +94,7 @@ class frontControllerApplication
 			'directoryIndex'								=> 'index.html',					# The directory index, used for local file retrieval
 			'userAgent'										=> 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',	# The user-agent string used for external retrieval
 			'emailDomain'									=> 'cam.ac.uk',
+			'idpName'										=> 'UIS/Raven',
 			'idpProviderOrganisationName'					=> 'UIS',
 			'idpGetPasswordUrl'								=> 'https://help.uis.cam.ac.uk/service/accounts-passwords',
 			'idpResetPasswordUrl'							=> 'https://help.uis.cam.ac.uk/service/accounts-passwords/password-reset',
@@ -393,7 +394,7 @@ class frontControllerApplication
 			return false;
 		}
 		
-		# Get the username if set - the security model hands trust up to Apache/Raven
+		# Get the username if set - the security model hands trust up to Apache / IdP provider
 		$this->user = (isSet ($_SERVER['REMOTE_USER']) ? $_SERVER['REMOTE_USER'] : NULL);
 		if ($this->settings['localAuth']) {$this->user = false;}		// The user comes from a database connection so the "new database" call (which supplies $this->user) cannot know the user by this point; this ordering avoids having to create two database connections (one for this call and one for the userAccount class)
 		if ($this->settings['user']) {$this->user = $this->settings['user'];}
@@ -659,7 +660,7 @@ class frontControllerApplication
 				
 				# Determine login text
 				$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: https://stackoverflow.com/questions/940905
-				$loginTextLink = "<a href=\"{$loginUrl}?{$location}\" tabindex=\"1\">log in (using Raven)</a>";
+				$loginTextLink = "<a href=\"{$loginUrl}?{$location}\" tabindex=\"1\">log in (using {$this->settings['idpName']})</a>";
 				if ($this->settings['localAuth']) {
 					$loginTextLink = "<a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\">log in</a> (or <a href=\"{$this->baseUrl}/{$this->actions['register']['url']}\">create an account</a>)";
 				}
@@ -673,7 +674,7 @@ class frontControllerApplication
 					echo "\n<br />" . $this->settings['loginMessageHtml'];
 				}
 				if (!$this->settings['localAuth']) {
-					echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on Raven accounts</a> is available.)</p>";
+					echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on {$this->settings['idpName']} accounts</a> is available.)</p>";
 				}
 				
 				# End execution
@@ -2481,7 +2482,7 @@ class frontControllerApplication
 	private function loggedout ()
 	{
 		echo '
-		<p>You have logged out of Raven for this site.</p>
+		<p>You have logged out of ' . $this->settings['idpName'] . ' for this site.</p>
 		<p>If you have finished browsing, then you should completely exit your web browser. This is the best way to prevent others from accessing your personal information and visiting web sites using your identity.</p>
 		<p>If for any reason you can\'t exit your browser you should first log-out of all other personalised sites that you have accessed and then <a href="' . $this->settings['idpCentralLogoutUrl'] . '" target="_blank">logout from the central authentication service</a>.</p>';
 	}
@@ -2491,14 +2492,14 @@ class frontControllerApplication
 	public function help ()
 	{
 		# Construct the help text
-		$html  = "\n" . '<h3 id="updating">User accounts - Raven authentication</h3>';
-		$html .= "\n" . '<p>To make changes, a Raven password is required for security. You can <a href="' . $this->settings['idpGetPasswordUrl'] . '" target="_blank">obtain your Raven password</a> from ' . $this->settings['idpProviderOrganisationName'] . ' immediately if you do not yet have it.</p>';
-		$html .= "\n" . '<p>If you have <strong>forgotten</strong> your Raven password, you will need to <a href="' . $this->settings['idpResetPasswordUrl'] . '" target="_blank">request a new one</a> from ' . $this->settings['idpProviderOrganisationName'] . '.</p>';
+		$html  = "\n" . '<h3 id="updating">User accounts - ' . $this->settings['idpName'] . ' authentication</h3>';
+		$html .= "\n" . '<p>To make changes, a ' . $this->settings['idpName'] . ' password is required for security. You can <a href="' . $this->settings['idpGetPasswordUrl'] . '" target="_blank">obtain your ' . $this->settings['idpName'] . ' password</a> from ' . $this->settings['idpProviderOrganisationName'] . ' immediately if you do not yet have it.</p>';
+		$html .= "\n" . '<p>If you have <strong>forgotten</strong> your ' . $this->settings['idpName'] . ' password, you will need to <a href="' . $this->settings['idpResetPasswordUrl'] . '" target="_blank">request a new one</a> from ' . $this->settings['idpProviderOrganisationName'] . '.</p>';
 		$html .= "\n" . '<h3 id="security">Security</h3>';
-		$html .= "\n" . "<p>Various security and auditing mechanisms are in place. " . ($_SERVER['_SERVER_PROTOCOL_TYPE'] == 'http' ? "Submissions are sent using HTTP as the server does not currently have an SSL certificate, although the Raven authentication stage is transmitted using HTTPS." : 'Submissions are encrypted using HTTPS.') . " Please <a href=\"{$this->baseUrl}/feedback.html\">contact us</a> if you have any questions on security.</p>";
+		$html .= "\n" . "<p>Various security and auditing mechanisms are in place. " . ($_SERVER['_SERVER_PROTOCOL_TYPE'] == 'http' ? 'Submissions are sent using HTTP as the server does not currently have an SSL certificate, although the ' . $this->settings['idpProviderOrganisationName'] . ' authentication stage is transmitted using HTTPS.' : 'Submissions are encrypted using HTTPS.') . " Please <a href=\"{$this->baseUrl}/feedback.html\">contact us</a> if you have any questions on security.</p>";
 		$html .= "\n" . '<p>Attempts to add Javascript or HTML tags to submitted data will fail.</p>';
 		$html .= "\n" . '<h3 id="lookup">How do we pre-fill your name in some webforms?</h3>';
-		$html .= "\n" . '<p>If you are logged in via Raven, we use the University\'s <a href="https://www.lookup.cam.ac.uk/" target="_blank">lookup service</a> to obtain then pre-fill your name as a time-saving courtesy.</p>';
+		$html .= "\n" . '<p>If you are logged in via ' . $this->settings['idpName'] . ', we use the University\'s <a href="https://www.lookup.cam.ac.uk/" target="_blank">lookup service</a> to obtain then pre-fill your name as a time-saving courtesy.</p>';
 		$html .= "\n" . '<h3 id="dataprotection">Data protection</h3>';
 		$html .= "\n" . '<p>All data is stored in accordance with the Data Protection Act, and data submitted through this system will not be passed on to third parties.</p>';
 		$html .= "\n" . '<h3 id="contacts">Any further questions?</h3>';
@@ -2944,7 +2945,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		# Compile the HTML
 		#!# if (true) is bogus code
 		if (true) {
-			$authSystemName = 'Raven';
+			$authSystemName = $this->settings['idpName'];
 			if ($this->settings['localAuth']) {
 				$authSystemName = 'Password';
 			}
