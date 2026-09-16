@@ -11,7 +11,7 @@
 	RewriteRule ^$baseUrl(data)\.(json|xml)$ $baseUrlindex.html?action=$1 [L,QSA]
 	RewriteRule ^$baseUrl(profile)/$ $baseUrlindex.html?action=$1 [L]
 	RewriteRule ^$baseUrl(profile)$ $baseUrl$1/ [L,R=301]
-	RewriteRule ^$baseUrl(login/)$ $baseUrlindex.html?action=logininternal [L,QSA]
+	RewriteRule ^$baseUrl(login/)$ $baseUrlindex.html?action=loginlocal [L,QSA]
 	RewriteRule ^$baseUrl(login)$ $baseUrl$1/ [L,R=301]
 	RewriteRule ^$baseUrl(login/logout)/$ $baseUrlindex.html?action=logoutinternal [L,QSA]
 	RewriteRule ^$baseUrllogin/(register|resetpassword|accountdetails|deleteaccount)/$ $baseUrlindex.html?action=$1 [L,QSA]

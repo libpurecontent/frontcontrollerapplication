@@ -217,33 +217,33 @@ class frontControllerApplication
 			'url' => 'login.html',
 			'usetab' => 'home',
 		),
-		'logininternal' => array (		// Enabled only for the built-in authentication/authorisation system using passwords and local database
+		'loginlocal' => array (		// Enabled only for localAuth
 			'description' => 'Login',
 			'url' => 'login/',
 			'usetab' => 'home',
 		),
-		'logoutinternal' => array (		// Enabled only for the built-in authentication/authorisation system using passwords and local database
+		'logoutlocal' => array (		// Enabled only for localAuth
 			'description' => 'Logout',
 			'url' => 'login/logout/',
 			'usetab' => 'home',
 		),
-		'register' => array (		// Enabled only for the built-in authentication/authorisation system using passwords and local database
+		'register' => array (		// Enabled only for localAuth
 			'description' => 'Create a new account',
 			'url' => 'login/register/',
 			'usetab' => 'home',
 		),
-		'resetpassword' => array (		// Enabled only for the built-in authentication/authorisation system using passwords and local database
+		'resetpassword' => array (		// Enabled only for localAuth
 			'description' => 'Reset a forgotten password',
 			'url' => 'login/resetpassword/',
 			'usetab' => 'home',
 		),
-		'accountdetails' => array (		// Enabled only for the built-in authentication/authorisation system using passwords and local database
+		'accountdetails' => array (		// Enabled only for localAuth
 			'description' => 'Change login account details',
 			'url' => 'login/accountdetails/',
 			'usetab' => 'home',
 			'authentication' => true,
 		),
-		'deleteaccount' => array (		// Enabled only for the built-in authentication/authorisation system using passwords and local database
+		'deleteaccount' => array (		// Enabled only for localAuth
 			'description' => 'Delete your account',
 			'url' => 'login/deleteaccount/',
 			'usetab' => 'home',
@@ -291,7 +291,7 @@ class frontControllerApplication
 	# User status (an optional way of adding (...) after the username in the login corner
 	private $userStatus = false;
 	
-	# Internal auth implementation, using libpurecontent/useraccount
+	# Local auth implementation, using libpurecontent/useraccount, using e-mail/passwords and a local database
 	private $localAuthClass = NULL;
 	
 	# Define common text
@@ -424,14 +424,14 @@ class frontControllerApplication
 		# Get the action
 		$this->action = (isSet ($_GET['action']) ? $_GET['action'] : 'home');
 		
-		# If dataDisableAuth is needed, and action=data, do not load internal auth, as we do not want cookie transmission of any sort
+		# If dataDisableAuth is needed, and action=data, do not load local auth, as we do not want cookie transmission of any sort
 		if ($this->settings['dataDisableAuth']) {
 			if ($this->action == 'data') {
 				$this->settings['localAuth'] = false;
 			}
 		}
 		
-		# Deal with internal auth (often not used)
+		# Deal with local auth (not ordinarily used, as IdP logins are the default)
 		$this->userVisibleIdentifier = $this->user;
 		$this->userEmail = false;
 		if ($this->settings['localAuth']) {
@@ -623,7 +623,7 @@ class frontControllerApplication
 			$authLinkVisibility = (preg_match ($delimiter . addcslashes ($this->settings['authLinkVisibility'], $delimiter) . $delimiter, gethostbyaddr ($_SERVER['REMOTE_ADDR'])));
 		}
 		
-		# Determine if a IdP user (i.e. federated Identity Provider login, rather than the built-in authentication/authorisation system using passwords and local database)
+		# Determine if a IdP user (i.e. federated Identity Provider login, rather than localAuth)
 		$this->idpUser = ($this->user ? !substr_count ($this->user, '@') : NULL);
 		
 		# Determine login/logout URLs
@@ -631,7 +631,7 @@ class frontControllerApplication
 		$loginUrl  = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/login/'  : $this->baseUrl . '/login.html');
 		$logoutUrl = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/logout/' : $this->baseUrl . '/logout.html');
 		if ($this->settings['localAuth']) {
-			$logoutUrl = $this->baseUrl . '/' . $this->actions['logoutinternal']['url'];
+			$logoutUrl = $this->baseUrl . '/' . $this->actions['logoutlocal']['url'];
 		}
 		
 		# Add login status to header, if set to be visible
@@ -662,7 +662,7 @@ class frontControllerApplication
 				$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: https://stackoverflow.com/questions/940905
 				$loginTextLink = "<a href=\"{$loginUrl}?{$location}\" tabindex=\"1\">log in (using {$this->settings['idpName']})</a>";
 				if ($this->settings['localAuth']) {
-					$loginTextLink = "<a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\">log in</a> (or <a href=\"{$this->baseUrl}/{$this->actions['register']['url']}\">create an account</a>)";
+					$loginTextLink = "<a href=\"{$this->baseUrl}/{$this->actions['loginlocal']['url']}?{$location}\">log in</a> (or <a href=\"{$this->baseUrl}/{$this->actions['register']['url']}\">create an account</a>)";
 				}
 				
 				# Show login requirement text
@@ -1046,15 +1046,15 @@ class frontControllerApplication
 		# Remove tabs if necessary
 		if (!$this->settings['helpTab']) {unset ($actions['help']['tab']);}
 		
-		# If using internal login (passwords and a local database), remove the federated Identity Provider login/logout
+		# If using localAuth logins (e-mail/passwords and a local database), remove the federated Identity Provider login/logout
 		if ($this->settings['localAuth']) {
 			unset ($actions['login']);
 			unset ($actions['logout']);
 		} else {
 			
-			# If not using internal login (passwords and a local database), remove the internal login functions
-			unset ($actions['logininternal']);
-			unset ($actions['logoutinternal']);
+			# If not using localAuth logins (e-mail/passwords and a local database), remove the localAuth login functions
+			unset ($actions['loginlocal']);
+			unset ($actions['logoutlocal']);
 			unset ($actions['register']);
 			unset ($actions['resetpassword']);
 			unset ($actions['accountdetails']);
@@ -1660,10 +1660,10 @@ class frontControllerApplication
 		$delimiter = '/';
 		if (ini_get ('output_buffering') && preg_match ($delimiter . '^action=' . preg_quote ($method, $delimiter) . $delimiter, $_SERVER['QUERY_STRING'])) {
 			
-			# For internal login, return whether valid credentials have been supplied, and if not show a form
+			# For local login, return whether valid credentials have been supplied, and if not show a form
 			if ($this->settings['localAuth']) {
-				$method = 'logininternal';
-				$html .= $this->logininternal ($result /* passed back by reference */);
+				$method = 'loginlocal';
+				$html .= $this->loginlocal ($result /* passed back by reference */);
 				if (!$result) {
 					echo $html;
 					return false;
@@ -1677,7 +1677,7 @@ class frontControllerApplication
 				$location = '/' . str_replace ("action={$method}&/", '', $_SERVER['QUERY_STRING']);
 			}
 		
-			#!# This isn't actually needed by the logininternal implementation, as that handles redirects itself
+			#!# This isn't actually needed by the loginlocal implementation, as that handles redirects itself
 			header ('Location: ' . $_SERVER['_SITE_URL'] . $location);
 			return false;
 		}
@@ -1712,7 +1712,7 @@ class frontControllerApplication
 		} else {
 			$loginTextLink = "You are not currently <a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">logged in</a>";
 			if ($this->settings['localAuth']) {
-				$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\" rel=\"nofollow\">logged in</a>";
+				$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/{$this->actions['loginlocal']['url']}?{$location}\" rel=\"nofollow\">logged in</a>";
 			}
 			$html .= $loginTextLink;
 		}
@@ -1726,13 +1726,13 @@ class frontControllerApplication
 	
 	
 	# Login function, only available if localAuth is enabled
-	private function logininternal (&$status = false)
+	private function loginlocal (&$status = false)
 	{
 		# Run the validation and return the supplied e-mail
 		$this->user = $this->localAuthClass->login ($showStatus = true);
 		
 		# Assemble the HTML
-		$html  = "\n<h2>" . $this->actions['logininternal']['description'] . '</h2>';
+		$html  = "\n<h2>" . $this->actions['loginlocal']['description'] . '</h2>';
 		$html .= $this->localAuthClass->getHtml ();
 		
 		# Set the status
@@ -1744,7 +1744,7 @@ class frontControllerApplication
 	
 	
 	# Logout message, only available if localAuth is enabled
-	private function logoutinternal ()
+	private function logoutlocal ()
 	{
 		# Log out and confirm this status
 		$this->localAuthClass->logout ();
@@ -2875,7 +2875,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 	}
 	
 	
-	# Function to provide cookie-based login internally
+	# Function to provide cookie-based local auth
 	private function loadLocalAuth ()
 	{
 		# Assemble the settings to use
