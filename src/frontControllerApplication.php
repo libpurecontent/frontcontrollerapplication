@@ -54,7 +54,7 @@ class frontControllerApplication
 			'dataDisableAuth'								=> false,		// Whether to disable auth on the data function (only relevant when using authentication=true); this can cause logout due to fast cookie transfer
 			#!# Rename to localAuth for clarity, as internalAuth allows registration by external people
 			'internalAuth'									=> false,		// Enable the built-in authentication/authorisation system using passwords and a local database, rather than the default federated Identity Provider logins
-			'internalAuthSalt'								=> '%_salt',	// Salt used for internalAuth; should be set if using internalAuth
+			'internalAuthSaltLegacyHashes'					=> false,		// Legacy salt used for internalAuth (was '%_salt' in earlier version of this library), no longer necessary
 			'internalAuthPasswordRequiresLettersAndNumbers'	=> true,		// Whether the internal auth password requires both letters and numbers
 			'loginMessageHtml'								=> false,		// Extra message for login page, e.g. to clarify what type of account needed, etc.
 			'authLinkVisibility'							=> true,		// Whether the auth link is visible (true/false or regexp for matching REMOTE_ADDR)
@@ -2867,13 +2867,13 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 	{
 		# Assemble the settings to use
 		$internalAuthSettings = array (
-			'saltLegacyHashes'					=> $this->settings['internalAuthSalt'],
 			'baseUrl'							=> $this->baseUrl,
 			'database'							=> $this->settings['database'],
 			'applicationName'					=> $this->settings['applicationName'],
 			'administratorEmail'				=> $this->settings['administratorEmail'],
 			'passwordRequiresLettersAndNumbers'	=> $this->settings['internalAuthPasswordRequiresLettersAndNumbers'],
 			'loginMessageHtml'					=> $this->settings['loginMessageHtml'],
+			'saltLegacyHashes'					=> $this->settings['internalAuthSaltLegacyHashes'],
 		);
 		
 		# Load the user account system
