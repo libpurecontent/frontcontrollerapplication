@@ -1055,13 +1055,13 @@ class frontControllerApplication
 			unset ($actions['logoutexternal']);
 		}
 		
-		# If using internal login, remove the standard login/logout
+		# If using internal login (passwords and a local database), remove the federated Identity Provider login/logout
 		if ($this->settings['internalAuth']) {
 			unset ($actions['login']);
 			unset ($actions['logout']);
 		} else {
 			
-			# If not using internal login, remove the internal login functions
+			# If not using internal login (passwords and a local database), remove the internal login functions
 			unset ($actions['logininternal']);
 			unset ($actions['logoutinternal']);
 			unset ($actions['register']);
@@ -2509,7 +2509,7 @@ class frontControllerApplication
 	}
 	
 	
-	# Logout message
+	# Logout message, for federated Identity Provider logins
 	private function loggedout ()
 	{
 		echo '
