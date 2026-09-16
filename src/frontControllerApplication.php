@@ -53,13 +53,13 @@ class frontControllerApplication
 			'authentication' 								=> false,		// Whether all pages require authentication
 			'dataDisableAuth'								=> false,		// Whether to disable auth on the data function (only relevant when using authentication=true); this can cause logout due to fast cookie transfer
 			'externalAuth'									=> false,		// Allow external authentication/authorisation
+			'externalAuthMinimumPasswordLength'				=> 12,			// Minimum password length when using externalAuth; ensures compliance with Cyber Essentials Basic (UK)
 			#!# Rename to localAuth for clarity, as internalAuth allows registration by external people
 			'internalAuth'									=> false,		// Enable the built-in authentication/authorisation system using passwords and a local database, rather than the default federated Identity Provider logins
 			'internalAuthSalt'								=> '%_salt',	// Salt used for internalAuth; should be set if using internalAuth
 			'internalAuthPasswordRequiresLettersAndNumbers'	=> true,		// Whether the internal auth password requires both letters and numbers
 			'loginMessageHtml'								=> false,		// Extra message for login page, e.g. to clarify what type of account needed, etc.
 			'authLinkVisibility'							=> true,		// Whether the auth link is visible (true/false or regexp for matching REMOTE_ADDR)
-			'minimumPasswordLength'							=> 12,			// Minimum password length when using externalAuth; ensures compliance with Cyber Essentials Basic (UK)
 			'h1'											=> false,		// NB an empty string will remove <h1>..</h1> altogether
 			'headerLocation'								=> false,		// GUI header, if local loading needed
 			'footerLocation'								=> false,		// GUI footer, if local loading needed
@@ -3047,7 +3047,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 				'title'			=> 'Password',
 				'required'		=> true,
 				'generate'		=> true,
-				'minlength'		=> $this->settings['minimumPasswordLength'],
+				'minlength'		=> $this->settings['externalAuthMinimumPasswordLength'],
 			));
 			$form->select (array (
 				'name'			=> 'privilege',
