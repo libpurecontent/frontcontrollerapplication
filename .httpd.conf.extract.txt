@@ -7,7 +7,7 @@
 <Macro MacroFrontControllerApplication $baseUrl $description>
 	
 	RewriteEngine on
-	RewriteRule ^$baseUrl(help|feedback|admin|administrators|history|settings|login|loginexternal|logoutexternal|loggedout|data).html$ $baseUrlindex.html?action=$1 [L,QSA]
+	RewriteRule ^$baseUrl(help|feedback|admin|administrators|history|settings|login|loggedout|data).html$ $baseUrlindex.html?action=$1 [L,QSA]
 	RewriteRule ^$baseUrl(data)\.(json|xml)$ $baseUrlindex.html?action=$1 [L,QSA]
 	RewriteRule ^$baseUrl(profile)/$ $baseUrlindex.html?action=$1 [L]
 	RewriteRule ^$baseUrl(profile)$ $baseUrl$1/ [L,R=301]

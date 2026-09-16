@@ -52,8 +52,6 @@ class frontControllerApplication
 			'enabled'										=> true,		// Whether this application is enabled
 			'authentication' 								=> false,		// Whether all pages require authentication
 			'dataDisableAuth'								=> false,		// Whether to disable auth on the data function (only relevant when using authentication=true); this can cause logout due to fast cookie transfer
-			'externalAuth'									=> false,		// Allow external authentication/authorisation
-			'externalAuthMinimumPasswordLength'				=> 12,			// Minimum password length when using externalAuth; ensures compliance with Cyber Essentials Basic (UK)
 			#!# Rename to localAuth for clarity, as internalAuth allows registration by external people
 			'internalAuth'									=> false,		// Enable the built-in authentication/authorisation system using passwords and a local database, rather than the default federated Identity Provider logins
 			'internalAuthSalt'								=> '%_salt',	// Salt used for internalAuth; should be set if using internalAuth
@@ -216,16 +214,6 @@ class frontControllerApplication
 		'login' => array (		// This exists as a URL, but is never actually run as a page, and has no login () page function, because login requirement is intercepted earlier by the controller logic
 			'description' => 'Login',
 			'url' => 'login.html',
-			'usetab' => 'home',
-		),
-		'loginexternal' => array (
-			'description' => 'Friends login',
-			'url' => 'loginexternal.html',
-			'usetab' => 'home',
-		),
-		'logoutexternal' => array (
-			'description' => 'Friends logout',
-			'url' => 'logoutexternal.html',
 			'usetab' => 'home',
 		),
 		'logininternal' => array (		// Enabled only for the built-in authentication/authorisation system using passwords and local database
@@ -641,9 +629,6 @@ class frontControllerApplication
 		#!# Should have urlencode also?
 		$loginUrl  = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/login/'  : $this->baseUrl . '/login.html');
 		$logoutUrl = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/logout/' : $this->baseUrl . '/logout.html');
-		if (!$this->ravenUser) {
-			$logoutUrl = $this->baseUrl . '/logoutexternal.html';
-		}
 		if ($this->settings['internalAuth']) {
 			$logoutUrl = $this->baseUrl . '/' . $this->actions['logoutinternal']['url'];
 		}
@@ -672,7 +657,6 @@ class frontControllerApplication
 				$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: https://stackoverflow.com/questions/940905
 				if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
 				$loginTextLink = "<a href=\"{$loginUrl}?{$location}\" tabindex=\"1\">log in (using Raven)</a>";
-				if ($this->settings['externalAuth']) {$loginTextLink = "log in using [<a href=\"{$loginUrl}?{$location}\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\">Friends login</a>]";}
 				if ($this->settings['internalAuth']) {$loginTextLink = "<a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\">log in</a> (or <a href=\"{$this->baseUrl}/{$this->actions['register']['url']}\">create an account</a>)";}
 				echo "\n<p><strong>Please " . $loginTextLink . " so that you can " . ($this->actions[$this->action]['description'] ? htmlspecialchars (strtolower (strip_tags ($this->actions[$this->action]['description']))) : 'use this facility') . '.</strong></p>';
 				if ($this->settings['loginMessageHtml']) {
@@ -1048,12 +1032,6 @@ class frontControllerApplication
 		
 		# Remove tabs if necessary
 		if (!$this->settings['helpTab']) {unset ($actions['help']['tab']);}
-		
-		# Remove external login if necessary
-		if (!$this->settings['externalAuth']) {
-			unset ($actions['loginexternal']);
-			unset ($actions['logoutexternal']);
-		}
 		
 		# If using internal login (passwords and a local database), remove the federated Identity Provider login/logout
 		if ($this->settings['internalAuth']) {
@@ -1486,7 +1464,7 @@ class frontControllerApplication
 		foreach ($administrators as $username => $administrator) {
 			$administrators[$username]['email']  = ((isSet ($administrator['email']) && (!empty ($administrator['email']))) ? $administrator['email'] : $username);
 			if (!substr_count ($administrators[$username]['email'], '@')) {
-				$administrators[$username]['email'] .= (((!isSet ($administrator['userType'])) || ($administrator['userType'] != 'External')) ? "@{$this->settings['emailDomain']}" : '');
+				$administrators[$username]['email'] .= '@' . $this->settings['emailDomain'];
 			}
 		}
 		
@@ -1720,9 +1698,6 @@ class frontControllerApplication
 		# Otherwise, if not logged in, give login links
 		} else {
 			$loginTextLink = "You are not currently <a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">logged in</a>";
-			if ($this->settings['externalAuth']) {
-				$loginTextLink = "You are not currently logged in using [<a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">Raven</a>] or [<a href=\"{$this->baseUrl}/loginexternal.html?{$location}\" rel=\"nofollow\">Friends login</a>]";
-			}
 			if ($this->settings['internalAuth']) {
 				$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\" rel=\"nofollow\">logged in</a>";
 			}
@@ -1734,25 +1709,6 @@ class frontControllerApplication
 		
 		# Return the HTML
 		return $html;
-	}
-	
-	
-	# Login function
-	private function loginexternal ()
-	{
-		# Pass on
-		return $this->loginLogic (__FUNCTION__);
-	}
-	
-	
-	# Logout message
-	private function logoutexternal ()
-	{
-		# Construct the HTML
-		$html = "\n" . '<p>To log out, please close all instances of your web browser.</p>';
-		
-		# Show the HTML
-		echo $html;
 	}
 	
 	
@@ -3010,67 +2966,6 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 			$html .= "\n" . '</div>';
 		}
 		
-		# Add an external administrator form, if using the external auth option
-		#!# Refactor to use dataBinding by combining with the above code
-		if ($this->settings['externalAuth']) {
-			$authSystemName = 'Friends';
-			$html .= "\n<div class=\"{$boxClass}\">";
-			$html .= "\n<h3 id=\"add" . strtolower ($authSystemName) . "\">Add an administrator ({$authSystemName} login)</h3>";
-			$form = new form (array (
-				'name' => 'add' . strtolower ($authSystemName),
-				'submitTo' => '#add' . strtolower ($authSystemName),
-				'formCompleteText' => false,
-				'div' => false,
-				'databaseConnection'	=> $this->databaseConnection,
-				'displayRestrictions' => false,
-				'requiredFieldIndicator' => false,
-			));
-			$form->email (array (
-				'name'			=> 'email',
-				'title'			=> 'E-mail address',
-				'required'		=> true,
-				'current'		=> array_keys ($this->administrators),
-				'description'	=> '(This will be used as the login username)',
-			));
-			$form->input (array (
-				'name'			=> 'forename',
-				'title'			=> 'Forename',
-				'required'		=> true,
-			));
-			$form->input (array (
-				'name'			=> 'surname',
-				'title'			=> 'Surname',
-				'required'		=> true,
-			));
-			$form->password (array (
-				'name'			=> 'password',
-				'title'			=> 'Password',
-				'required'		=> true,
-				'generate'		=> true,
-				'minlength'		=> $this->settings['externalAuthMinimumPasswordLength'],
-			));
-			$form->select (array (
-				'name'			=> 'privilege',
-				'title'			=> 'Administrator level',
-				'values'		=> array ('Administrator', 'Restricted administrator'),
-				'default'		=> 'Administrator',
-				'required'		=> true,
-			));
-			if ($result = $form->process ($html)) {
-				
-				# Encrypt the password
-				$result['password'] = crypt ($result['password']);
-				
-				# Add in fixed data
-				$result[$usernameField] = $result['email'];
-				$result['userType'] = 'External';
-				
-				# Add and inform the new administrator
-				$html .= $this->processNewAdministrator ($result, $usernameField, $authSystemName);
-			}
-			$html .= "\n" . '</div>';
-		}
-		
 		# Return the HTML
 		return $html;
 	}
@@ -3090,10 +2985,9 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 			$result['privilege'] = (isSet ($result['privilege']) ? $result['privilege'] : 'Administrator');
 			$result['forename'] = (isSet ($result['forename']) ? $result['forename'] : $result[$usernameField]);
 			$result['password'] = (isSet ($result['password']) ? $result['password'] : "[Your {$authSystemName} password]");
-			$result['userType'] = (isSet ($result['userType']) ? $result['userType'] : 'Raven');
 			
 			# Confirm success and reload the list
-			$html .= "\n<p>" . htmlspecialchars ($result[$usernameField]) . ' has been added as an ' . ($result['userType'] == 'External' ? 'external ' : '') . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
+			$html .= "\n<p>" . htmlspecialchars ($result[$usernameField]) . ' has been added as an ' . strtolower ($result['privilege']) . '. <a href="">Reset page.</a></p>';
 			$this->administrators = $this->getAdministrators ();
 			
 			# E-mail the new user
@@ -3140,7 +3034,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 			));
 			$form->input (array (
 				'name'			=> 'confirm',
-				'title'			=> ($this->settings['externalAuth'] ? 'Type username/e-mail to confirm' : 'Type username to confirm'),
+				'title'			=> 'Type username to confirm',
 				'required'		=> true,
 			));
 			$form->validation ('same', array ($usernameField, 'confirm'));
@@ -3214,7 +3108,6 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 			# Show the listing
 			$html .= "\n<p>The following are administrators of this system and can make changes to the data in it:</p>";
 			$onlyFields = array_merge (array ($usernameField), array_keys ($showFields));
-			if ($this->settings['externalAuth']) {$onlyFields[] = 'userType';}
 			$tableHeadingSubstitutions = $showFields;
 			$tableHeadingSubstitutions[$usernameField] = 'Username';
 			$administrators = $this->administrators;
