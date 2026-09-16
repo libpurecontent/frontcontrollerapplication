@@ -3047,7 +3047,7 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 				'title'			=> 'Password',
 				'required'		=> true,
 				'generate'		=> true,
-				'minlength'		=> 4,
+				'minlength'		=> $this->settings['minimumPasswordLength'],
 			));
 			$form->select (array (
 				'name'			=> 'privilege',
