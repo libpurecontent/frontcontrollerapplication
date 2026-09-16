@@ -34,7 +34,7 @@ class frontControllerApplication
 	protected $exportType;
 	protected $parentAction;
 	protected $isParentAction;
-	protected $ravenUser;
+	protected $idpUser;
 	protected $userName;
 	protected $userPhone;
 	protected $year;
@@ -622,8 +622,8 @@ class frontControllerApplication
 			$authLinkVisibility = (preg_match ($delimiter . addcslashes ($this->settings['authLinkVisibility'], $delimiter) . $delimiter, gethostbyaddr ($_SERVER['REMOTE_ADDR'])));
 		}
 		
-		# Determine if a Raven user (i.e. federated Identity Provider login, rather than the built-in authentication/authorisation system using passwords and local database)
-		$this->ravenUser = ($this->user ? !substr_count ($this->user, '@') : NULL);
+		# Determine if a IdP user (i.e. federated Identity Provider login, rather than the built-in authentication/authorisation system using passwords and local database)
+		$this->idpUser = ($this->user ? !substr_count ($this->user, '@') : NULL);
 		
 		# Determine login/logout URLs
 		#!# Should have urlencode also?
