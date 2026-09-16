@@ -94,6 +94,7 @@ class frontControllerApplication
 			'directoryIndex'								=> 'index.html',					# The directory index, used for local file retrieval
 			'userAgent'										=> 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',	# The user-agent string used for external retrieval
 			'emailDomain'									=> 'cam.ac.uk',
+			'idpProviderOrganisationName'					=> 'UIS',
 			'idpGetPasswordUrl'								=> 'https://help.uis.cam.ac.uk/service/accounts-passwords',
 			'idpResetPasswordUrl'							=> 'https://help.uis.cam.ac.uk/service/accounts-passwords/password-reset',
 			'idpCentralLogoutUrl'							=> 'https://support.microsoft.com/en-gb/authentication/signout',
@@ -2491,8 +2492,8 @@ class frontControllerApplication
 	{
 		# Construct the help text
 		$html  = "\n" . '<h3 id="updating">User accounts - Raven authentication</h3>';
-		$html .= "\n" . '<p>To make changes, a Raven password is required for security. You can <a href="' . $this->settings['idpGetPasswordUrl'] . '" target="_blank">obtain your Raven password</a> from the University Computing Service immediately if you do not yet have it.</p>';
-		$html .= "\n" . '<p>If you have <strong>forgotten</strong> your Raven password, you will need to <a href="' . $this->settings['idpResetPasswordUrl'] . '" target="_blank">request a new one</a> from the central University Computing Service.</p>';
+		$html .= "\n" . '<p>To make changes, a Raven password is required for security. You can <a href="' . $this->settings['idpGetPasswordUrl'] . '" target="_blank">obtain your Raven password</a> from ' . $this->settings['idpProviderOrganisationName'] . ' immediately if you do not yet have it.</p>';
+		$html .= "\n" . '<p>If you have <strong>forgotten</strong> your Raven password, you will need to <a href="' . $this->settings['idpResetPasswordUrl'] . '" target="_blank">request a new one</a> from ' . $this->settings['idpProviderOrganisationName'] . '.</p>';
 		$html .= "\n" . '<h3 id="security">Security</h3>';
 		$html .= "\n" . "<p>Various security and auditing mechanisms are in place. " . ($_SERVER['_SERVER_PROTOCOL_TYPE'] == 'http' ? "Submissions are sent using HTTP as the server does not currently have an SSL certificate, although the Raven authentication stage is transmitted using HTTPS." : 'Submissions are encrypted using HTTPS.') . " Please <a href=\"{$this->baseUrl}/feedback.html\">contact us</a> if you have any questions on security.</p>";
 		$html .= "\n" . '<p>Attempts to add Javascript or HTML tags to submitted data will fail.</p>';
