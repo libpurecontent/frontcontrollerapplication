@@ -649,14 +649,24 @@ class frontControllerApplication
 			$authRequiredGlobally = false;	// Override global authentication setting if explicitly set to false for the local action
 		}
 		if (!$this->user && ($authRequiredByAction || $authRequiredGlobally)) {
+			
+			# Disable user authentication for pages never requiring this
 			$pagesNeverRequiringAuthentication = array ('register', 'resetpassword', );
 			if ($this->settings['dataDisableAuth']) {$pagesNeverRequiringAuthentication[] = 'data';}
 			if ($this->settings['apiUsername']) {$pagesNeverRequiringAuthentication[] = 'api';}
 			if (!in_array ($this->action, $pagesNeverRequiringAuthentication)) {
+				
+				# Determine login text
 				$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: https://stackoverflow.com/questions/940905
-				if ($this->settings['authentication']) {echo "\n<p>Welcome.</p>";}
 				$loginTextLink = "<a href=\"{$loginUrl}?{$location}\" tabindex=\"1\">log in (using Raven)</a>";
-				if ($this->settings['localAuth']) {$loginTextLink = "<a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\">log in</a> (or <a href=\"{$this->baseUrl}/{$this->actions['register']['url']}\">create an account</a>)";}
+				if ($this->settings['localAuth']) {
+					$loginTextLink = "<a href=\"{$this->baseUrl}/{$this->actions['logininternal']['url']}?{$location}\">log in</a> (or <a href=\"{$this->baseUrl}/{$this->actions['register']['url']}\">create an account</a>)";
+				}
+				
+				# Show login requirement text
+				if ($this->settings['authentication']) {
+					echo "\n<p>Welcome.</p>";
+				}
 				echo "\n<p><strong>Please " . $loginTextLink . " so that you can " . ($this->actions[$this->action]['description'] ? htmlspecialchars (strtolower (strip_tags ($this->actions[$this->action]['description']))) : 'use this facility') . '.</strong></p>';
 				if ($this->settings['loginMessageHtml']) {
 					echo "\n<br />" . $this->settings['loginMessageHtml'];
@@ -664,6 +674,8 @@ class frontControllerApplication
 				if (!$this->settings['localAuth']) {
 					echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on Raven accounts</a> is available.)</p>";
 				}
+				
+				# End execution
 				echo $endDiv;
 				echo $footer;
 				return false;
