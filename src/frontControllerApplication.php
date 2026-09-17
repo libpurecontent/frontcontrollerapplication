@@ -2732,8 +2732,8 @@ class frontControllerApplication
 		$html  = "\n<h3>Memory usage:</h3>";
 		$html .= "\n<a href=\"https://gperftools.github.io/gperftools/heapprofile.html\" target=\"_blank\"><img src=\"{$imageLocation}\"></a>";
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
