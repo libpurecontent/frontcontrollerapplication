@@ -609,7 +609,9 @@ class frontControllerApplication
 		}
 		
 		# Redirect to the page requested if necessary
-		if (!$this->loginLogic ()) {
+		if (!$this->loginLogic ($formHtml /* returned by reference */)) {
+			echo $headerHtml;
+			echo $formHtml;
 			echo $endDiv;
 			echo $footer;
 			return false;
@@ -1650,11 +1652,8 @@ class frontControllerApplication
 	
 	
 	# Login logic function, determining whether the user is logged in or not, and if not, redirecting accordingly or showing the login page
-	private function loginLogic ()
+	private function loginLogic (&$html = '')
 	{
-		# Start the HTML
-		$html = '';
-		
 		# Ensure there is a username, by forcing a query string with "action=login" in to be redirected to the login method noted
 		#!# Throw error 1 if on the login page and no username is provided by the server
 		$method = 'login';
@@ -1665,7 +1664,7 @@ class frontControllerApplication
 				$method = 'loginlocal';
 				$html .= $this->loginlocal ($result /* passed back by reference */);
 				if (!$result) {
-					echo $html;
+					// Modified $html will be returned by reference
 					return false;
 				}
 			}
