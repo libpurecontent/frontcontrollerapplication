@@ -3700,10 +3700,10 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		$result = "\n" . implode ("\n", $lines);
 		
 		# Surround as print_r
-		$result = application::dumpData ($result, false, $return = true);
+		$html = application::dumpData ($result, false, $return = true);
 		
-		# Echo the result
-		echo $result;
+		# Return the HTML
+		return $html;
 	}
 	
 	
