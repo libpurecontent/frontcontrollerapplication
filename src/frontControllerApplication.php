@@ -647,6 +647,7 @@ class frontControllerApplication
 		}
 		
 		# Add login status to header, if set to be visible
+		#!# On the logout page, this will still show people as logged in as this header is generated before the signing-out activity
 		if ($authLinkVisibility) {
 			$headerHtml = $this->loggedInAsHtml ($loginUrl, $logoutUrl, $authLimited) . $headerHtml;
 		}
