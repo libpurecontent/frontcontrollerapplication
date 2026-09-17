@@ -438,7 +438,7 @@ class frontControllerApplication
 		}
 		
 		# Set user and attributes ($this->user, $this->userEmail, $this->userVisibleIdentifier)
-		$this->assignUser ();
+		echo $this->assignUser ();
 		
 		# Setup the database if required
 		if ($this->settings['useDatabase']) {
@@ -1446,6 +1446,9 @@ class frontControllerApplication
 	# Function to assign the user and their attributes, by working through available identity providers
 	private function assignUser ()
 	{
+		# Start the HTML
+		$html = '';
+		
 		# Forced user scenario, which always takes priority over idpAuth or localAuth
 		if ($this->settings['user']) {
 			$this->user = $this->settings['user'];
@@ -1479,9 +1482,12 @@ class frontControllerApplication
 				}
 				$this->settings['idpAuth'] = false;		// Disable idpAuth to avoid co-existence
 				#!# This appears above the tabs
-				echo $this->localAuthClass->getHtml ();	// Basically will only appear if the user gets logged out for security reasons
+				$html = $this->localAuthClass->getHtml ();	// Basically will only appear if the user gets logged out for security reasons
 			}
 		}
+		
+		# Return the HTML
+		return $html;
 	}
 	
 	
