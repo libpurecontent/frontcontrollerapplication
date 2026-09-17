@@ -2929,18 +2929,6 @@ class frontControllerApplication
 			'editable'	=> (!$this->user),
 		));
 		
-#!# Temporary anti-spam measure, 140729, mvl22
-if ($unfinalisedData = $form->getUnfinalisedData ()) {
-	if (preg_match ('/^([a-z]+)@gmail.com$/', $unfinalisedData['contacts'])) {      // E-mails always coming from [a-z]+@gmail.com
-		if (preg_match ("~http://([^\s]+)$~i", trim ($unfinalisedData['message']))) {   // Message always ends with a link
-			$form->registerProblem ('antispam', 'Please remove web addresses from your submission.');
-		}
-	}
-	if (substr_count ($unfinalisedData['message'], 'Cryptaxbot')) {
-		$form->registerProblem ('antispam', 'Error.');
-	}
-}
-
 		# Set the processing options
 		$form->setOutputEmail ($this->settings['feedbackRecipient'], $this->settings['administratorEmail'], "{$this->settings['applicationName']} contact form", NULL, $replyToField = 'contacts');
 		$form->setOutputScreen ();
