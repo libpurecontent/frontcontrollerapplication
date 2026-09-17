@@ -435,26 +435,8 @@ class frontControllerApplication
 			}
 		}
 		
-		# Get the username if set - the security model hands trust up to Apache / IdP provider
-		$this->user = (isSet ($_SERVER['REMOTE_USER']) ? $_SERVER['REMOTE_USER'] : NULL);
-		if ($this->settings['localAuth']) {$this->user = false;}
-		if ($this->settings['user']) {$this->user = $this->settings['user'];}
-		// localAuth also may then assign $this->user below, after obtaining the database connection to facilitate this
-		
-		# Deal with local auth (not ordinarily used, as IdP logins are the default)
-		$this->userVisibleIdentifier = $this->user;
-		$this->userEmail = false;
-		if ($this->settings['localAuth']) {
-			$this->loadLocalAuth ();
-			$this->user = $this->localAuthClass->getUserId ();
-			$this->userEmail = $this->localAuthClass->getUserEmail ();
-			if ($this->settings['useDatabase']) {
-				$this->databaseConnection->setUserForLogging ($this->userEmail);
-			}
-			$this->userVisibleIdentifier = $this->localAuthClass->getUserEmail ();
-			#!# This appears above the tabs
-			echo $this->localAuthClass->getHtml ();	// Basically will only appear if the user gets logged out for security reasons
-		}
+		# Set user and attributes ($this->user, $this->userEmail, $this->userVisibleIdentifier)
+		$this->assignUser ();
 		
 		# Setup the database if required
 		if ($this->settings['useDatabase']) {
@@ -634,9 +616,6 @@ class frontControllerApplication
 			$delimiter = '@';
 			$authLinkVisibility = (preg_match ($delimiter . addcslashes ($this->settings['authLinkVisibility'], $delimiter) . $delimiter, gethostbyaddr ($_SERVER['REMOTE_ADDR'])));
 		}
-		
-		# Determine if a IdP user (i.e. federated Identity Provider login, rather than localAuth)
-		$this->idpUser = ($this->user ? !substr_count ($this->user, '@') : NULL);
 		
 		# Determine login/logout URLs
 		#!# Should have urlencode also?
@@ -1444,6 +1423,35 @@ class frontControllerApplication
 		
 		# Return the HTML
 		return $html;
+	}
+	
+	
+	# Function to assign the user and their attributes, by working through available identity providers
+	private function assignUser ()
+	{
+		# Get the username if set - the security model hands trust up to Apache / IdP provider
+		$this->user = (isSet ($_SERVER['REMOTE_USER']) ? $_SERVER['REMOTE_USER'] : NULL);
+		if ($this->settings['localAuth']) {$this->user = false;}
+		if ($this->settings['user']) {$this->user = $this->settings['user'];}
+		// localAuth also may then assign $this->user below, after obtaining the database connection to facilitate this
+		
+		# Deal with local auth (not ordinarily used, as IdP logins are the default)
+		$this->userVisibleIdentifier = $this->user;
+		$this->userEmail = false;
+		if ($this->settings['localAuth']) {
+			$this->loadLocalAuth ();
+			$this->user = $this->localAuthClass->getUserId ();
+			$this->userEmail = $this->localAuthClass->getUserEmail ();
+			if ($this->settings['useDatabase']) {
+				$this->databaseConnection->setUserForLogging ($this->userEmail);
+			}
+			$this->userVisibleIdentifier = $this->localAuthClass->getUserEmail ();
+			#!# This appears above the tabs
+			echo $this->localAuthClass->getHtml (); // Basically will only appear if the user gets logged out for security reasons
+		}
+		
+		# Determine if a IdP user (i.e. federated Identity Provider login, rather than localAuth)
+		$this->idpUser = ($this->user ? !substr_count ($this->user, '@') : NULL);
 	}
 	
 	
