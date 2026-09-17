@@ -1447,6 +1447,25 @@ class frontControllerApplication
 	}
 	
 	
+	# Function to provide cookie-based local auth
+	private function loadLocalAuth ()
+	{
+		# Assemble the settings to use
+		$localAuthSettings = array (
+			'baseUrl'							=> $this->baseUrl,
+			'database'							=> $this->settings['database'],
+			'applicationName'					=> $this->settings['applicationName'],
+			'administratorEmail'				=> $this->settings['administratorEmail'],
+			'passwordRequiresLettersAndNumbers'	=> $this->settings['localAuthPasswordRequiresLettersAndNumbers'],
+			'loginMessageHtml'					=> $this->settings['loginMessageHtml'],
+			'saltLegacyHashes'					=> $this->settings['localAuthSaltLegacyHashes'],
+		);
+		
+		# Load the user account system
+		$this->localAuthClass = new userAccount ($localAuthSettings, $this->databaseConnection);
+	}
+	
+	
 	# Function to get an array of administrators
 	private function getAdministrators ()
 	{
@@ -2882,25 +2901,6 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 		
 		# Return the HTML
 		return $html;
-	}
-	
-	
-	# Function to provide cookie-based local auth
-	private function loadLocalAuth ()
-	{
-		# Assemble the settings to use
-		$localAuthSettings = array (
-			'baseUrl'							=> $this->baseUrl,
-			'database'							=> $this->settings['database'],
-			'applicationName'					=> $this->settings['applicationName'],
-			'administratorEmail'				=> $this->settings['administratorEmail'],
-			'passwordRequiresLettersAndNumbers'	=> $this->settings['localAuthPasswordRequiresLettersAndNumbers'],
-			'loginMessageHtml'					=> $this->settings['loginMessageHtml'],
-			'saltLegacyHashes'					=> $this->settings['localAuthSaltLegacyHashes'],
-		);
-		
-		# Load the user account system
-		$this->localAuthClass = new userAccount ($localAuthSettings, $this->databaseConnection);
 	}
 	
 	
