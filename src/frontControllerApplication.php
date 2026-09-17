@@ -394,14 +394,15 @@ class frontControllerApplication
 			return false;
 		}
 		
-		# Get the username if set - the security model hands trust up to Apache / IdP provider
-		$this->user = (isSet ($_SERVER['REMOTE_USER']) ? $_SERVER['REMOTE_USER'] : NULL);
-		if ($this->settings['localAuth']) {$this->user = false;}		// The user comes from a database connection so the "new database" call (which supplies $this->user) cannot know the user by this point; this ordering avoids having to create two database connections (one for this call and one for the userAccount class)
-		if ($this->settings['user']) {$this->user = $this->settings['user'];}
+		# Determine the user for logging; this is a lightweight check for a logged-in user, but cannot work for localAuth users as that relies on the database connection existing already
+		$userAtInitialDatabaseConnection = false;
+		if (isSet ($_SERVER['REMOTE_USER']) && strlen ($_SERVER['REMOTE_USER'])) {$userAtInitialDatabaseConnection = $_SERVER['REMOTE_USER'];}
+		// For localAuth, no implementation possible: the user comes from a database connection so the "new database" call (which supplies $this->user) cannot know the user by this point; this ordering avoids having to create two database connections (one for this call and one for the userAccount class)
+		if ($this->settings['user']) {$userAtInitialDatabaseConnection = $this->settings['user'];}	// Forced user
 		
 		# If required, make connections to the database server and ensure the tables exist
 		if ($this->settings['useDatabase']) {
-			$this->databaseConnection = new database ($this->settings['hostname'], $this->settings['username'], $this->settings['password'], $this->settings['database'], $this->settings['vendor'], $this->settings['logfile'], $this->user /* If using localAuth, set later */, $this->settings['nativeTypes']);
+			$this->databaseConnection = new database ($this->settings['hostname'], $this->settings['username'], $this->settings['password'], $this->settings['database'], $this->settings['vendor'], $this->settings['logfile'], $userAtInitialDatabaseConnection /* If using localAuth, will be set later */, $this->settings['nativeTypes']);
 			if (!$this->databaseConnection->connection) {
 				echo $this->databaseConnection->reportError ($this->settings['administratorEmail'], $this->settings['applicationName']);
 				echo $footer;
@@ -430,6 +431,12 @@ class frontControllerApplication
 				$this->settings['localAuth'] = false;
 			}
 		}
+		
+		# Get the username if set - the security model hands trust up to Apache / IdP provider
+		$this->user = (isSet ($_SERVER['REMOTE_USER']) ? $_SERVER['REMOTE_USER'] : NULL);
+		if ($this->settings['localAuth']) {$this->user = false;}
+		if ($this->settings['user']) {$this->user = $this->settings['user'];}
+		// localAuth also may then assign $this->user below, after obtaining the database connection to facilitate this
 		
 		# Deal with local auth (not ordinarily used, as IdP logins are the default)
 		$this->userVisibleIdentifier = $this->user;
