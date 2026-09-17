@@ -52,9 +52,6 @@ class frontControllerApplication
 			'enabled'										=> true,		// Whether this application is enabled
 			'authentication' 								=> false,		// Whether all pages require authentication
 			'dataDisableAuth'								=> false,		// Whether to disable auth on the data function (only relevant when using authentication=true); this can cause logout due to fast cookie transfer
-			'localAuth'										=> false,		// Enable the built-in authentication/authorisation system using passwords and a local database, rather than the default federated Identity Provider logins
-			'localAuthSaltLegacyHashes'						=> false,		// Legacy salt used for localAuth (was '%_salt' in earlier version of this library), no longer necessary
-			'localAuthPasswordRequiresLettersAndNumbers'	=> true,		// Whether the localAuth password requires both letters and numbers
 			'loginMessageHtml'								=> false,		// Extra message for login page, e.g. to clarify what type of account needed, etc.
 			'authLinkVisibility'							=> true,		// Whether the auth link is visible (true/false or regexp for matching REMOTE_ADDR)
 			'h1'											=> false,		// NB an empty string will remove <h1>..</h1> altogether
@@ -94,11 +91,18 @@ class frontControllerApplication
 			'directoryIndex'								=> 'index.html',					# The directory index, used for local file retrieval
 			'userAgent'										=> 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',	# The user-agent string used for external retrieval
 			'emailDomain'									=> 'cam.ac.uk',
+			# Forced user auth (highest priority auth type):
+			'user'											=> false,	// Become this user
+			# IdP auth (second priority auth type, after forced):
 			'idpName'										=> 'UIS/Raven',
 			'idpProviderOrganisationName'					=> 'UIS',
 			'idpGetPasswordUrl'								=> 'https://help.uis.cam.ac.uk/service/accounts-passwords',
 			'idpResetPasswordUrl'							=> 'https://help.uis.cam.ac.uk/service/accounts-passwords/password-reset',
 			'idpCentralLogoutUrl'							=> 'https://support.microsoft.com/en-gb/authentication/signout',
+			# Local auth (lowest priority auth type, after forced and IdP):
+			'localAuth'										=> false,		// Enable the built-in authentication/authorisation system using passwords and a local database, rather than the default federated Identity Provider logins; this uses URLs starting /login/
+			'localAuthSaltLegacyHashes'						=> false,		// Legacy salt used for localAuth (was '%_salt' in earlier version of this library), no longer necessary
+			'localAuthPasswordRequiresLettersAndNumbers'	=> true,		// Whether the localAuth password requires both letters and numbers
 			'authFileGroup'									=> false,		// Whether to write an auth file containing the administrators, and if so, what group name (or true, which will allocate 'administrators')
 			'page404'										=> false,	// Or include_path path to custom page
 			'useAdmin'										=> true,
@@ -112,7 +116,6 @@ class frontControllerApplication
 			'debug'											=> false,	# Whether to switch on debugging info
 			'minimumPhpVersion'								=> '5.1.0',	// PDO supported in 5.1 and above
 			'showChanges'									=> 25,		// Number of most recent changes to show in log file
-			'user'											=> false,	// Become this user
 			#!# Needs a formDiv setting, for setting the 'div' parameter of ultimateForm; this would also propagate to the sinenomine integration in editing()
 			'opening'										=> false,
 			'closing'										=> false,
