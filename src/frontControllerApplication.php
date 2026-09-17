@@ -27,6 +27,7 @@ class frontControllerApplication
 	protected $administrators;
 	protected $userIsAdministrator;
 	protected $enableSettingsSubtab;
+	protected $settingsOriginal;
 	protected $enableProfileTab;
 	protected $profile;
 	protected $restrictedAdministrator;
