@@ -662,7 +662,7 @@ class frontControllerApplication
 		if (!$this->user && ($authRequiredByAction || $authRequiredGlobally)) {
 			
 			# Disable user authentication for pages never requiring this
-			$pagesNeverRequiringAuthentication = array ('register', 'resetpassword', 'help');
+			$pagesNeverRequiringAuthentication = array ('register', 'resetpassword', 'help', 'feedback');
 			if ($this->settings['dataDisableAuth']) {$pagesNeverRequiringAuthentication[] = 'data';}
 			if ($this->settings['apiUsername']) {$pagesNeverRequiringAuthentication[] = 'api';}
 			if (!in_array ($this->action, $pagesNeverRequiringAuthentication)) {
