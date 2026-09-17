@@ -344,7 +344,7 @@ class frontControllerApplication
 		
 		# End if not enabled
 		if (!$this->settings['enabled']) {
-			$this->page404 ();
+			echo $this->page404 ();
 			return false;
 		}
 		
@@ -567,7 +567,7 @@ class frontControllerApplication
 		
 		# End if no valid action selected
 		if (!$this->action || !array_key_exists ($this->action, $this->actions)) {
-			$this->page404 ();
+			echo $this->page404 ();
 			echo $footer;
 			return false;
 		}
@@ -779,7 +779,18 @@ class frontControllerApplication
 		
 		# Perform the action
 		if (!$disableAutoGui) {
-			$this->performAction ($this->doAction, $this->item);
+
+			# Determine if a function is built in to this library, rather than being defined by client code
+			$internalFunctions = get_class_methods ('frontControllerApplication');		// Specific named class means that methods of extended classes will not be included, i.e. is strictly this class internally only
+			$isBuiltIn = (in_array ($this->doAction, $internalFunctions));
+			
+			# Perform the action (normal mode)
+			if ($isBuiltIn) {
+				echo $this->performAction ($this->doAction, $this->item);
+			} else {
+				$this->performAction ($this->doAction, $this->item);
+			}
+			
 		}
 		
 		# End with a div if not an export type
@@ -946,8 +957,8 @@ class frontControllerApplication
 			}
 		}
 		
-		# Perform the action (normal mode)
-		$this->$action ($item);
+		# Run the action, and return any output
+		return $this->$action ($item);
 	}
 	
 	
@@ -1835,8 +1846,8 @@ class frontControllerApplication
 		# Assemble the HTML
 		$html  = $this->localAuthClass->getHtml ();
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -1849,8 +1860,8 @@ class frontControllerApplication
 		# Assemble the HTML
 		$html  = $this->localAuthClass->getHtml ();
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -1863,8 +1874,8 @@ class frontControllerApplication
 		# Assemble the HTML
 		$html  = $this->localAuthClass->getHtml ();
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -1877,8 +1888,8 @@ class frontControllerApplication
 		# Assemble the HTML
 		$html  = $this->localAuthClass->getHtml ();
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -1891,8 +1902,8 @@ class frontControllerApplication
 		# Assemble the HTML
 		$html  = $this->localAuthClass->getHtml ();
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -1907,8 +1918,8 @@ class frontControllerApplication
 		
 		# Ensure that apiCalls have been defined
 		if (!$apiCalls) {
-			$this->page404 ();
-			return false;
+			$html = $this->page404 ();
+			return $html;
 		}
 		
 		# Start the HTML
@@ -1942,8 +1953,8 @@ class frontControllerApplication
 			$html .= $apiClass->{$documentationMethod} ();
 		}
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -1997,8 +2008,8 @@ class frontControllerApplication
 		
 		# Ensure that apiCalls have been defined
 		if (!$apiCalls) {
-			$this->page404 ();
-			return false;
+			$html = $this->page404 ();
+			return $html;
 		}
 		
 		# Initialise the API
@@ -2029,7 +2040,7 @@ class frontControllerApplication
 		# Send the data
 		header ('Content-Type: application/json; charset=UTF-8');
 		header ('Content-Length: ' . strlen ($json));
-		echo $json;
+		return $json;
 	}
 	
 	
@@ -2182,7 +2193,7 @@ class frontControllerApplication
 	
 	
 	# Function to provide a general-purpose importing user interface
-	public function importUi ($baseFilenames, $importTypes = array ('full' => 'FULL import'), $fileCreationInstructionsHtml = '<p>Save the data to a file on your computer (which you can delete later).</p>', $fileExtension = 'xml', $echoHtml = true)
+	public function importUi ($baseFilenames, $importTypes = array ('full' => 'FULL import'), $fileCreationInstructionsHtml = '<p>Save the data to a file on your computer (which you can delete later).</p>', $fileExtension = 'xml')
 	{
 		# Allow long-running processes
 		ini_set ('max_execution_time', 0);
@@ -2193,8 +2204,7 @@ class frontControllerApplication
 		# Ensure that the import routine has been defined in the client program
 		if (!method_exists ($this, 'doImport')) {
 			$html .= "\n" . '<p class="warning">Importing is not enabled.</p>';
-			echo $html;
-			return;
+			return $html;
 		}
 		
 		# Add support for application root in the exports directory setting
@@ -2229,11 +2239,6 @@ class frontControllerApplication
 		
 		# Show log file if present
 		$html .= $this->importLogHtml ();
-		
-		# Show the HTML if required
-		if ($echoHtml) {
-			echo $html;
-		}
 		
 		# Return the HTML
 		return $html;
@@ -2547,17 +2552,23 @@ class frontControllerApplication
 	# Data endpoint
 	public function data ()
 	{
-		echo '<p>This URL can be assigned a function data() for transmission of data.</p>';
+		$html = '<p>This URL can be assigned a function data() for transmission of data.</p>';
+		
+		# Return the HTML
+		return $html;
 	}
 	
 	
 	# Logout message, for federated Identity Provider logins
 	private function loggedout ()
 	{
-		echo '
+		$html = '
 		<p>You have logged out of ' . $this->settings['idpName'] . ' for this site.</p>
 		<p>If you have finished browsing, then you should completely exit your web browser. This is the best way to prevent others from accessing your personal information and visiting web sites using your identity.</p>
 		<p>If for any reason you can\'t exit your browser you should first log-out of all other personalised sites that you have accessed and then <a href="' . $this->settings['idpCentralLogoutUrl'] . '" target="_blank">logout from the central authentication service</a>.</p>';
+		
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -2578,8 +2589,8 @@ class frontControllerApplication
 		$html .= "\n" . '<h3 id="contacts">Any further questions?</h3>';
 		$html .= "\n" . "<p>We very much hope you find this new facility user-friendly and self-explanatory. However, if you still have questions, please do not hesitate to <a href=\"{$this->baseUrl}/feedback.html\">contact us</a>.</p>";
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -2614,8 +2625,8 @@ class frontControllerApplication
 		# Compile the HTML, adding a heading
 		$html = $this->actionsListHtml ($actions, true);
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -2624,8 +2635,8 @@ class frontControllerApplication
 	{
 		# End if there is no log file
 		if (!file_exists ($this->settings['logfile'])) {
-			echo "\n" . '<p>There is no log file, so changes cannot be listed.</p>';
-			return false;
+			$html = "\n" . '<p>There is no log file, so changes cannot be listed.</p>';
+			return $html;
 		}
 		
 		# Get the log file contents
@@ -2638,8 +2649,8 @@ class frontControllerApplication
 		
 		# Ensure changes are found
 		if (!$changes) {
-			echo "\n<p class=\"warning\">There was some problem reading the logfile.</p>";
-			return false;
+			$html = "\n<p class=\"warning\">There was some problem reading the logfile.</p>";
+			return $html;
 		}
 		
 		# Loop through each change
@@ -2662,8 +2673,8 @@ class frontControllerApplication
 		$html .= "\n</div>";
 		$html .= "\n" . implode ("\n\n", $changesHtml);
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -2787,8 +2798,8 @@ class frontControllerApplication
 			$html = "\n<p><img src=\"/images/icons/tick.png\" class=\"icon\" alt=\"\" /> The settings have been updated.</p>" . $html;
 		}
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -2876,14 +2887,14 @@ class frontControllerApplication
 			$html = "\n<p><img src=\"/images/icons/tick.png\" class=\"icon\" alt=\"\" /> The settings have been updated.</p>" . $html;
 		}
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
 	# Feedback form
 	#!# This is a poor API
-	public function feedback ($id_ignored = NULL, $error_ignored = NULL, $echoHtml = true)
+	public function feedback ($id_ignored = NULL, $error_ignored = NULL)
 	{
 		# Start the HTML
 		$html = "<p>We welcome your feedback on this facility. If you have any suggestions, questions or comments - whether positive or negative - we'd like to hear from you. Please use the form below to send us your feedback.</p>";
@@ -2924,12 +2935,7 @@ class frontControllerApplication
 		$form->setOutputScreen ();
 		
 		# Process the form
-		$result = $form->process ($html);
-		
-		# Show the HTML if required
-		if ($echoHtml) {
-			echo $html;
-		}
+		$form->process ($html);
 		
 		# Return the HTML
 		return $html;
@@ -2973,8 +2979,8 @@ class frontControllerApplication
 		# Show current administrators
 		$html .= $this->administratorsShow ($boxClass, $administratorUsernameField, $showFields);
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -3262,8 +3268,8 @@ class frontControllerApplication
 			$html .= "\n<p>Please check the URL or use the menu to navigate elsewhere.</p>";
 		}
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -3272,8 +3278,8 @@ class frontControllerApplication
 	{
 		$html  = "\n<p>Welcome</p>";
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -3342,8 +3348,8 @@ class frontControllerApplication
 		# Surround with a div to enable styling
 		$html = "\n<div id=\"editinginternal\">\n\n" . $html . "\n\n</div>";
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
@@ -3535,16 +3541,14 @@ class frontControllerApplication
 		$this->settings['templatesDirectory'];
 		if (!is_writable ($this->settings['templatesDirectory'])) {
 			$html .= "\n<p class=\"error\">The application is not set up correctly - the template directory at <tt>{$this->settings['templatesDirectory']}</tt> is not writable.</p>";
-			echo $html;
-			return;
+			return $html;
 		}
 		
 		# Get the list of templates or end
 		#!# Add support for nested directories
 		if (!$templateFiles = directories::listFiles ($this->settings['templatesDirectory'], array ('tpl'), $directoryIsFromRoot = true)) {
 			$html .= "\n<p>There are no templates.</p>";
-			echo $html;
-			return;
+			return $html;
 		}
 		
 		# Arrange the data as path => file
@@ -3557,8 +3561,8 @@ class frontControllerApplication
 		# If a template has been selected for editing, end if not present in the registry of templates
 		if ($template) {
 			if (!isSet ($templates[$template])) {
-				$this->page404 ();
-				return false;
+				$html = $this->page404 ();
+				return $html;
 			}
 		}
 		
@@ -3570,8 +3574,7 @@ class frontControllerApplication
 			}
 			$html .= "\n<p>Click on a template below to edit it.</p>";
 			$html .= application::htmlUl ($list);
-			echo $html;
-			return;
+			return $html;
 		}
 		
 		# Confirm the template file
@@ -3622,8 +3625,7 @@ class frontControllerApplication
 		
 		# Process the form
 		if (!$result = $form->process ($html)) {
-			echo $html;
-			return;
+			return $html;
 		}
 		
 		# Archive the original file
@@ -3642,8 +3644,8 @@ class frontControllerApplication
 		# Confirm success, resetting the HTML, and show the submission
 		$html = application::sendHeader (302, $redirectTo, true);
 		
-		# Show the HTML
-		echo $html;
+		# Return the HTML
+		return $html;
 	}
 	
 	
