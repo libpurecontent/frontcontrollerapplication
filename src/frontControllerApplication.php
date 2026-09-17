@@ -621,10 +621,10 @@ class frontControllerApplication
 		
 		# Determine login/logout URLs
 		#!# Should have urlencode also?
-		$loginUrlIdp  = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/login/'  : $this->baseUrl . '/login.html');
-		$logoutUrlIdp = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/logout/' : $this->baseUrl . '/logout.html');
-		$loginUrlLocalAuth  = $this->baseUrl . '/' . $this->actions['loginlocal']['url'];
-		$logoutUrlLocalAuth = $this->baseUrl . '/' . $this->actions['logoutlocal']['url'];
+		$loginUrlIdp  = ($this->settings['idpAuth'] ? (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/login/'  : $this->baseUrl . '/login.html') : NULL);
+		$logoutUrlIdp = ($this->settings['idpAuth'] ? (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/logout/' : $this->baseUrl . '/logout.html') : NULL);
+		$loginUrlLocalAuth  = ($this->settings['localAuth'] ? $this->baseUrl . '/' . $this->actions['loginlocal']['url'] : NULL);
+		$logoutUrlLocalAuth = ($this->settings['localAuth'] ? $this->baseUrl . '/' . $this->actions['logoutlocal']['url'] : NULL);
 		
 		# Add login status to header, if set to be visible
 		#!# On the logout page, this will still show people as logged in as this header is generated before the signing-out activity
