@@ -1650,15 +1650,15 @@ class frontControllerApplication
 	
 	
 	# Login logic function, determining whether the user is logged in or not, and if not, redirecting accordingly or showing the login page
-	private function loginLogic ($method = 'login')
+	private function loginLogic ()
 	{
 		# Start the HTML
 		$html = '';
 		
 		# Ensure there is a username, by forcing a query string with "action=login" in to be redirected to the login method noted
 		#!# Throw error 1 if on the login page and no username is provided by the server
-		$delimiter = '/';
-		if (ini_get ('output_buffering') && preg_match ($delimiter . '^action=' . preg_quote ($method, $delimiter) . $delimiter, $_SERVER['QUERY_STRING'])) {
+		$method = 'login';
+		if (ini_get ('output_buffering') && preg_match ("/^action={$method}/", $_SERVER['QUERY_STRING'])) {
 			
 			# For local login, return whether valid credentials have been supplied, and if not show a form
 			if ($this->settings['localAuth']) {
