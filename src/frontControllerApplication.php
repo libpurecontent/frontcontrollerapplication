@@ -17,13 +17,13 @@ class frontControllerApplication
 	protected $importLog;
 	protected $dataUrl;
 	protected $footerMessage;
-	protected $user;
+	protected $user = NULL;
 	protected $databaseConnection;
 	protected $dataSource;
 	protected $homeUrlVisible;
 	protected $action;
-	protected $userVisibleIdentifier;
 	protected $userEmail = false;
+	protected $userVisibleIdentifier = false;
 	protected $administrators;
 	protected $userIsAdministrator;
 	protected $enableSettingsSubtab;
@@ -34,7 +34,7 @@ class frontControllerApplication
 	protected $exportType;
 	protected $parentAction;
 	protected $isParentAction;
-	protected $idpUser;
+	protected $idpUser = NULL;
 	protected $userName;
 	protected $userPhone;
 	protected $year;
@@ -94,6 +94,7 @@ class frontControllerApplication
 			# Forced user auth (highest priority auth type):
 			'user'											=> false,	// Become this user
 			# IdP auth (second priority auth type, after forced):
+			'idpAuth'										=> true,		// IdP container auth, where the webserver provides REMOTE_USER as a username (without @domain); this uses URLs /login.html and /logout.html
 			'idpName'										=> 'UIS/Raven',
 			'idpProviderOrganisationName'					=> 'UIS',
 			'idpGetPasswordUrl'								=> 'https://help.uis.cam.ac.uk/service/accounts-passwords',
@@ -101,6 +102,7 @@ class frontControllerApplication
 			'idpCentralLogoutUrl'							=> 'https://support.microsoft.com/en-gb/authentication/signout',
 			# Local auth (lowest priority auth type, after forced and IdP):
 			'localAuth'										=> false,		// Enable the built-in authentication/authorisation system using passwords and a local database, rather than the default federated Identity Provider logins; this uses URLs starting /login/
+			'localAuthName'									=> 'Friends',	// Description of local auth; will have ' login' added after
 			'localAuthSaltLegacyHashes'						=> false,		// Legacy salt used for localAuth (was '%_salt' in earlier version of this library), no longer necessary
 			'localAuthPasswordRequiresLettersAndNumbers'	=> true,		// Whether the localAuth password requires both letters and numbers
 			'authFileGroup'									=> false,		// Whether to write an auth file containing the administrators, and if so, what group name (or true, which will allocate 'administrators')
@@ -619,16 +621,15 @@ class frontControllerApplication
 		
 		# Determine login/logout URLs
 		#!# Should have urlencode also?
-		$loginUrl  = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/login/'  : $this->baseUrl . '/login.html');
-		$logoutUrl = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/logout/' : $this->baseUrl . '/logout.html');
-		if ($this->settings['localAuth']) {
-			$logoutUrl = $this->baseUrl . '/' . $this->actions['logoutlocal']['url'];
-		}
+		$loginUrlIdp  = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/login/'  : $this->baseUrl . '/login.html');
+		$logoutUrlIdp = (isSet ($_SERVER['SINGLE_SIGN_ON_ENABLED']) && $_SERVER['SINGLE_SIGN_ON_ENABLED'] ? '/logout/' : $this->baseUrl . '/logout.html');
+		$loginUrlLocalAuth  = $this->baseUrl . '/' . $this->actions['loginlocal']['url'];
+		$logoutUrlLocalAuth = $this->baseUrl . '/' . $this->actions['logoutlocal']['url'];
 		
 		# Add login status to header, if set to be visible
 		#!# On the logout page, this will still show people as logged in as this header is generated before the signing-out activity
 		if ($authLinkVisibility) {
-			$headerHtml = $this->loggedInAsHtml ($loginUrl, $logoutUrl, $authLimited) . $headerHtml;
+			$headerHtml = $this->loggedInAsHtml ($loginUrlIdp, $logoutUrlIdp, $loginUrlLocalAuth, $logoutUrlLocalAuth, $authLimited) . $headerHtml;
 		}
 		
 		# Show the header/tabs
@@ -652,21 +653,34 @@ class frontControllerApplication
 				
 				# Determine login text
 				$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: https://stackoverflow.com/questions/940905
-				$loginTextLink = "<a href=\"{$loginUrl}?{$location}\" tabindex=\"1\">log in (using {$this->settings['idpName']})</a>";
+				$purpose = "so that you can " . ($this->actions[$this->action]['description'] ? htmlspecialchars (strtolower (strip_tags ($this->actions[$this->action]['description']))) : 'use this facility');
+				
+				# Set the login link dependent on the auth type
+				if ($this->settings['idpAuth']) {
+					$loginTextHtml  = "<p><strong>Please <a href=\"{$loginUrlIdp}?{$location}\" rel=\"nofollow\">log in with {$this->settings['idpName']}</a>, " . $purpose . '</strong>.</p>';
+					$loginTextHtml .= "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on {$this->settings['idpName']} accounts</a> is available.)</p>";
+				}
 				if ($this->settings['localAuth']) {
-					$loginTextLink = "<a href=\"{$this->baseUrl}/{$this->actions['loginlocal']['url']}?{$location}\">log in</a> (or <a href=\"{$this->baseUrl}/{$this->actions['register']['url']}\">create an account</a>)";
+					$loginTextHtml = "<p><strong>Please <a href=\"{$this->baseUrl}/{$this->actions['loginlocal']['url']}?{$location}\">log in</a></strong> (or <a href=\"{$this->baseUrl}/{$this->actions['register']['url']}\">create an account</a>)<strong>, " . $purpose . '</strong>.</p>';
+				}
+				if ($this->settings['idpAuth'] && $this->settings['localAuth']) {
+					$loginTextHtml  = "<p><strong>Please log in {$purpose}, using either:</strong></p>";
+					$loginTextHtml .= "\n" . '<ul class="spaced">';
+					$loginTextHtml .= "\n\t<li><a href=\"{$loginUrlIdp}?{$location}\" rel=\"nofollow\"><strong>{$this->settings['idpName']} login</strong></a> &nbsp;(<a href=\"{$this->baseUrl}/help.html\">more info</a>)</li>";
+					$loginTextHtml .= "\n\t<li><a href=\"{$loginUrlLocalAuth}?{$location}\" rel=\"nofollow\"><strong>{$this->settings['localAuthName']} login</strong></a> &nbsp;(<a href=\"{$this->baseUrl}/{$this->actions['register']['url']}\">create {$this->settings['localAuthName']} login</a>)</li>";
+					$loginTextHtml .= "\n" . '</ul>';
+					$loginTextHtml .= "\n" . '<p>';
 				}
 				
 				# Show login requirement text
 				if ($this->settings['authentication']) {
 					echo "\n<p>Welcome.</p>";
 				}
-				echo "\n<p><strong>Please " . $loginTextLink . " so that you can " . ($this->actions[$this->action]['description'] ? htmlspecialchars (strtolower (strip_tags ($this->actions[$this->action]['description']))) : 'use this facility') . '.</strong></p>';
+				echo "\n" . $loginTextHtml;
 				if ($this->settings['loginMessageHtml']) {
 					echo "\n<br />" . $this->settings['loginMessageHtml'];
 				}
-				if (!$this->settings['localAuth']) {
-					echo "\n<p>(<a href=\"{$this->baseUrl}/help.html\">Information on {$this->settings['idpName']} accounts</a> is available.)</p>";
+				if ($this->settings['idpAuth']) {
 				}
 				
 				# End execution
@@ -1040,13 +1054,14 @@ class frontControllerApplication
 		# Remove tabs if necessary
 		if (!$this->settings['helpTab']) {unset ($actions['help']['tab']);}
 		
-		# If using localAuth logins (e-mail/passwords and a local database), remove the federated Identity Provider login/logout
-		if ($this->settings['localAuth']) {
+		# If not using using IdP logins (REMOTE_USER from server), remove the IdP auth -related functions
+		if (!$this->settings['idpAuth']) {
 			unset ($actions['login']);
 			unset ($actions['logout']);
-		} else {
-			
-			# If not using localAuth logins (e-mail/passwords and a local database), remove the localAuth login functions
+		}
+		
+		# If not using localAuth logins (e-mail/passwords and a local database), remove the localAuth-related functions
+		if (!$this->settings['localAuth']) {
 			unset ($actions['loginlocal']);
 			unset ($actions['logoutlocal']);
 			unset ($actions['register']);
@@ -1431,31 +1446,42 @@ class frontControllerApplication
 	# Function to assign the user and their attributes, by working through available identity providers
 	private function assignUser ()
 	{
-		# Get the username if set - the security model hands trust up to Apache / IdP provider
-		$this->user = (isSet ($_SERVER['REMOTE_USER']) ? $_SERVER['REMOTE_USER'] : NULL);
-		if ($this->settings['localAuth']) {$this->user = false;}
-		if ($this->settings['user']) {$this->user = $this->settings['user'];}
-		// localAuth also may then assign $this->user below, after obtaining the database connection to facilitate this
+		# Forced user scenario, which always takes priority over idpAuth or localAuth
+		if ($this->settings['user']) {
+			$this->user = $this->settings['user'];
+			$this->userEmail = $this->user . '@' . $this->settings['emailDomain'];
+			$this->userVisibleIdentifier = $this->user;
+			$this->idpUser = true;		// Flag for whether the user is an IdP user (i.e. federated Identity Provider login, rather than localAuth), or a forced user in IdP format
+			$this->settings['idpAuth']   = false;		// Disable IdP auth
+			$this->settings['localAuth'] = false;		// Disable localAuth
+		}
+		
+		# For IdP auth, get the username if set - the security model hands trust up to Apache / IdP provider; IdP takes priority if both set
+		if ($this->settings['idpAuth']) {
+			if (isSet ($_SERVER['REMOTE_USER']) && strlen ($_SERVER['REMOTE_USER'])) {
+				$this->user = $_SERVER['REMOTE_USER'];
+				$this->userEmail = $this->user . '@' . $this->settings['emailDomain'];
+				$this->userVisibleIdentifier = $this->user;
+				$this->idpUser = true;		// Flag for whether the user is an IdP user (i.e. federated Identity Provider login, rather than localAuth), or a forced user in IdP format
+				$this->settings['localAuth'] = false;		// Disable localAuth to avoid co-existence
+			}
+		}
 		
 		# Deal with local auth (not ordinarily used, as IdP logins are the default)
-		$this->userVisibleIdentifier = $this->user;
-		if ($this->user) {
-			$this->userEmail = $this->user . '@' . $this->settings['emailDomain'];
-		}
 		if ($this->settings['localAuth']) {
 			$this->loadLocalAuth ();
-			$this->user = $this->localAuthClass->getUserId ();
-			$this->userEmail = $this->localAuthClass->getUserEmail ();
-			if ($this->settings['useDatabase']) {
-				$this->databaseConnection->setUserForLogging ($this->userEmail);
+			if ($localAuthUser = $this->localAuthClass->getUserId ()) {
+				$this->user = $localAuthUser;	// Numeric user ID
+				$this->userEmail = $this->localAuthClass->getUserEmail ();
+				$this->userVisibleIdentifier = $this->localAuthClass->getUserEmail ();
+				if ($this->settings['useDatabase']) {
+					$this->databaseConnection->setUserForLogging ($this->userEmail);	// As we could not do this when creating the database connection, since at that point the user obviously did not exist
+				}
+				$this->settings['idpAuth'] = false;		// Disable idpAuth to avoid co-existence
+				#!# This appears above the tabs
+				echo $this->localAuthClass->getHtml ();	// Basically will only appear if the user gets logged out for security reasons
 			}
-			$this->userVisibleIdentifier = $this->localAuthClass->getUserEmail ();
-			#!# This appears above the tabs
-			echo $this->localAuthClass->getHtml (); // Basically will only appear if the user gets logged out for security reasons
 		}
-		
-		# Determine if a IdP user (i.e. federated Identity Provider login, rather than localAuth)
-		$this->idpUser = ($this->user ? !substr_count ($this->user, '@') : NULL);
 	}
 	
 	
@@ -1729,7 +1755,7 @@ class frontControllerApplication
 	
 	
 	# Function to format the login status indicator
-	private function loggedInAsHtml ($loginUrl, $logoutUrl, $authLimited)
+	private function loggedInAsHtml ($loginUrlIdp, $logoutUrlIdp, $loginUrlLocalAuth, $logoutUrlLocalAuth, $authLimited)
 	{
 		# Start paragraph
 		$html  = '<p class="loggedinas noprint"' . ($authLimited ? ' title="[The login system is not visible to all users]"' : '') . '>';
@@ -1747,14 +1773,25 @@ class frontControllerApplication
 				$html .= " ({$this->userStatus})";
 			}
 			$html .= '</strong>';
-			$html .= ' [<a href="' . $logoutUrl . "?{$location}\" class=\"logout\" rel=\"nofollow\">log out</a>]";
-			
-		# Otherwise, if not logged in, give login links
-		} else {
-			$loginTextLink = "You are not currently <a href=\"{$loginUrl}?{$location}\" rel=\"nofollow\">logged in</a>";
-			if ($this->settings['localAuth']) {
-				$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/{$this->actions['loginlocal']['url']}?{$location}\" rel=\"nofollow\">logged in</a>";
+			if ($this->settings['idpAuth']) {
+				$html .= ' [<a href="' . $logoutUrlIdp . "?{$location}\" class=\"logout\" rel=\"nofollow\">log out</a>]";
 			}
+			if ($this->settings['localAuth']) {
+				$html .= ' [<a href="' . $logoutUrlLocalAuth . "?{$location}\" class=\"logout\" rel=\"nofollow\">log out</a>]";
+			}
+			
+		# Otherwise, if not logged in, give login links, either IdP/localAuth/both
+		} else {
+			if ($this->settings['idpAuth']) {
+				$loginTextLink = "You are not currently <a href=\"{$loginUrlIdp}?{$location}\" rel=\"nofollow\">logged in</a>";
+			}
+			if ($this->settings['localAuth']) {
+				$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/{$loginUrlLocalAuth}?{$location}\" rel=\"nofollow\">logged in</a>";
+			}
+			if ($this->settings['idpAuth'] && $this->settings['localAuth']) {
+				$loginTextLink = "Log in with <a href=\"{$loginUrlIdp}?{$location}\" rel=\"nofollow\">[{$this->settings['idpName']} login]</a> or <a href=\"{$loginUrlLocalAuth}?{$location}\" rel=\"nofollow\">[{$this->settings['localAuthName']} login]</a>";
+			}
+			
 			$html .= $loginTextLink;
 		}
 		
