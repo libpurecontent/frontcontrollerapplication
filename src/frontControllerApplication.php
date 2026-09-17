@@ -23,7 +23,7 @@ class frontControllerApplication
 	protected $homeUrlVisible;
 	protected $action;
 	protected $userVisibleIdentifier;
-	protected $userEmail;
+	protected $userEmail = false;
 	protected $administrators;
 	protected $userIsAdministrator;
 	protected $enableSettingsSubtab;
@@ -726,7 +726,9 @@ class frontControllerApplication
 			if ($this->user && !$isCronUser) {
 				if ($person = camUniData::lookupUser ($this->user)) {
 					$this->userName = $person['name'];
-					$this->userEmail = ($person['email'] ? $person['email'] : $this->user . '@' . $this->settings['emailDomain']);
+					if ($person['email']) {
+						$this->userEmail = $person['email'];	// Overwrite if set
+					}
 					$this->userPhone = $person['telephone'];
 				}
 			}
@@ -1437,7 +1439,9 @@ class frontControllerApplication
 		
 		# Deal with local auth (not ordinarily used, as IdP logins are the default)
 		$this->userVisibleIdentifier = $this->user;
-		$this->userEmail = false;
+		if ($this->user) {
+			$this->userEmail = $this->user . '@' . $this->settings['emailDomain'];
+		}
 		if ($this->settings['localAuth']) {
 			$this->loadLocalAuth ();
 			$this->user = $this->localAuthClass->getUserId ();
@@ -2878,7 +2882,7 @@ class frontControllerApplication
 			'name'		=> 'contacts',
 			'title'		=> 'E-mail',
 			'required'	=> true,
-			'default'	=> ($this->userVisibleIdentifier ? $this->userVisibleIdentifier . ($this->settings['localAuth'] ? '' : '@' . $this->settings['emailDomain']) : ''),	// localAuth will result in e-mail addresses not usernames
+			'default'	=> ($this->user ? $this->userEmail : false),
 			'editable'	=> (!$this->user),
 		));
 		
