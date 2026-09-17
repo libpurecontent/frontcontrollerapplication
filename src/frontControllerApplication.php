@@ -1761,8 +1761,7 @@ class frontControllerApplication
 		$this->user = $this->localAuthClass->login ($showStatus = true);
 		
 		# Assemble the HTML
-		$html  = "\n<h2>" . $this->actions['loginlocal']['description'] . '</h2>';
-		$html .= $this->localAuthClass->getHtml ();
+		$html = $this->localAuthClass->getHtml ();
 		
 		# Set the status
 		$status = ($this->user);
