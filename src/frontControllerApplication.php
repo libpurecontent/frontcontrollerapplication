@@ -3284,8 +3284,6 @@ if ($unfinalisedData = $form->getUnfinalisedData ()) {
 			$html .= "\n<p>Please check the URL or use the menu to navigate elsewhere.</p>";
 			echo $html;
 		}
-		
-		return false;
 	}
 	
 	
