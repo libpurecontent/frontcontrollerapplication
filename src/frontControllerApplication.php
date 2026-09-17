@@ -2335,16 +2335,6 @@ class frontControllerApplication
 			return $html;
 		}
 		
-		/*
-		# State that the import is now running
-		$html = "\n<p>Import now running (can take 5-10 minutes)&hellip;</p>";
-		
-		# Flush the HTML so far
-		echo $html;
-		ob_flush ();
-		flush ();
-		*/
-		
 		# Determine the chosen files
 		$files = array ();
 		if ($this->settings['importsSectionsMode']) {
