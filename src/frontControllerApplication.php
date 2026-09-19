@@ -1506,10 +1506,14 @@ class frontControllerApplication
 	# Function to provide cookie-based local auth
 	private function loadLocalAuth ()
 	{
+		# Specify the database name; Postgres requires a schema rather than database
+		$dataPool = $this->settings['database'];
+		if ($this->settings['vendor'] == 'pgsql') {$dataPool = 'public';}	// #!# For now assume the current database and a schema 'public'
+		
 		# Assemble the settings to use
 		$localAuthSettings = array (
 			'baseUrl'							=> $this->baseUrl,
-			'database'							=> $this->settings['database'],
+			'database'							=> $dataPool,
 			'applicationName'					=> $this->settings['applicationName'],
 			'administratorEmail'				=> $this->settings['administratorEmail'],
 			'passwordRequiresLettersAndNumbers'	=> $this->settings['localAuthPasswordRequiresLettersAndNumbers'],
