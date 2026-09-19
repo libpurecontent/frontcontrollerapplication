@@ -104,8 +104,12 @@ class frontControllerApplication
 			# Local auth (lowest priority auth type, after forced and IdP):
 			'localAuth'										=> false,		// Enable the built-in authentication/authorisation system using passwords and a local database, rather than the default federated Identity Provider logins; this uses URLs starting /login/
 			'localAuthName'									=> 'Friends',	// Description of local auth; will have ' login' added after
-			'localAuthSaltLegacyHashes'						=> false,		// Legacy salt used for localAuth (was '%_salt' in earlier version of this library), no longer necessary
+			'localAuthTable'								=> 'users',		// In localAuth, table name
+			'localAuthUsernames'							=> false,		// Whether in localAuth to use usernames (necessary only for social applications, where friendly profile URLs are needed)
+			'localAuthVisibleNames'							=> false,		// Whether in localAuth there is a visible name field
 			'localAuthPasswordRequiresLettersAndNumbers'	=> true,		// Whether the localAuth password requires both letters and numbers
+			'localAuthPrivacyPolicy'						=> false,
+			'localAuthSaltLegacyHashes'						=> false,		// Legacy salt used for localAuth (was '%_salt' in earlier version of this library), no longer necessary
 			'authFileGroup'									=> false,		// Whether to write an auth file containing the administrators, and if so, what group name (or true, which will allocate 'administrators')
 			'page404'										=> false,	// Or include_path path to custom page
 			'useAdmin'										=> true,
@@ -1514,9 +1518,13 @@ class frontControllerApplication
 		$localAuthSettings = array (
 			'baseUrl'							=> $this->baseUrl,
 			'database'							=> $dataPool,
+			'table'								=> $this->settings['localAuthTable'],
 			'applicationName'					=> $this->settings['applicationName'],
 			'administratorEmail'				=> $this->settings['administratorEmail'],
+			'usernames'							=> $this->settings['localAuthUsernames'],
+			'visibleNames'						=> $this->settings['localAuthVisibleNames'],
 			'passwordRequiresLettersAndNumbers'	=> $this->settings['localAuthPasswordRequiresLettersAndNumbers'],
+			'privacyPolicy'						=> $this->settings['localAuthPrivacyPolicy'],
 			'loginMessageHtml'					=> $this->settings['loginMessageHtml'],
 			'saltLegacyHashes'					=> $this->settings['localAuthSaltLegacyHashes'],
 		);
