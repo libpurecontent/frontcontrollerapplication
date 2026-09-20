@@ -3056,8 +3056,12 @@ class frontControllerApplication
 		# Start the HTML
 		$html  = '';
 		
+		# Specify the database name; Postgres requires a schema rather than database
+		$dataPool = $this->settings['database'];
+		if ($this->settings['vendor'] == 'pgsql') {$dataPool = 'public';}	// #!# For now assume the current database and a schema 'public'
+		
 		# Insert the data
-		if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], $result)) {
+		if ($this->databaseConnection->insert ($dataPool, $this->settings['administrators'], $result)) {
 			
 			# Deal with variance in the fieldnames
 			$result['email'] = (isSet ($result['email']) ? $result['email'] : $result[$usernameField] . (substr_count ($result[$usernameField], '@') ? '' : "@{$this->settings['emailDomain']}"));
@@ -3090,6 +3094,11 @@ class frontControllerApplication
 		# Compile the HTML
 		$html  = "\n<div class=\"{$boxClass}\">";
 		$html .= "\n<h3 id=\"remove\">Remove an administrator</h3>";
+		
+		# Specify the database name; Postgres requires a schema rather than database
+		$dataPool = $this->settings['database'];
+		if ($this->settings['vendor'] == 'pgsql') {$dataPool = 'public';}	// #!# For now assume the current database and a schema 'public'
+		
 		$administrators = $this->administrators;
 		//unset ($administrators[$this->user]);	// Remove current user - you can't delete yourself
 		#!# Should be changed so that there is always one admin, but that inactive admins can always be removed
@@ -3118,7 +3127,9 @@ class frontControllerApplication
 			));
 			$form->validation ('same', array ($usernameField, 'confirm'));
 			if ($result = $form->process ($html)) {
-				if ($this->databaseConnection->delete ($this->settings['database'], $this->settings['administrators'], array ($usernameField => $result[$usernameField]))) {
+				
+				# Delete the entry
+				if ($this->databaseConnection->delete ($dataPool, $this->settings['administrators'], array ($usernameField => $result[$usernameField]))) {
 					$html .= "\n<p>" . htmlspecialchars ($result[$usernameField]) . " is no longer as an administrator. <a href=\"\">Reset page.</a></p>";
 					$this->administrators = $this->getAdministrators ();
 					
