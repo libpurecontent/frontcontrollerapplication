@@ -1558,17 +1558,22 @@ class frontControllerApplication
 			$this->settings['administrators'] = $this->settings['tablePrefix'] . $this->settings['administrators'];
 		}
 		
+		# Specify the database name; Postgres requires a schema rather than database
+		$dataPool = $this->settings['database'];
+		if ($this->settings['vendor'] == 'pgsql') {$dataPool = 'public';}	// #!# For now assume the current database and a schema 'public'
+
 		# Convert table to database.table
 		$administrators = $this->settings['administrators'];
 		if (!substr_count ($this->settings['administrators'], '.')) {
 			$administrators = "{$this->settings['database']}.{$this->settings['administrators']}";
+			$administratorsDataPool = "{$dataPool}.{$this->settings['administrators']}";
 		}
 		
 		# Get the fieldnames
-		$fields = $this->databaseConnection->getFieldnames ($this->settings['database'], $this->settings['administrators']);
+		$fields = $this->databaseConnection->getFieldnames ($administratorsDataPool, $this->settings['administrators']);
 		
 		# Get the list of administrators
-		$query = "SELECT * FROM {$administrators}" . (in_array ('active', $fields) ? " WHERE (active = 'Y' OR active = 'Yes')" : '') . ';';
+		$query = "SELECT * FROM {$administratorsDataPool}" . (in_array ('active', $fields) ? " WHERE (active = 'Y' OR active = 'Yes')" : '') . ';';
 		if (!$administrators = $this->databaseConnection->getData ($query, $administrators)) {
 			return false;
 		}
