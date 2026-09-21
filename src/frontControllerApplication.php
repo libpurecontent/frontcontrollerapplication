@@ -3015,11 +3015,15 @@ class frontControllerApplication
 			if ($this->settings['localAuth']) {
 				$authSystemName = 'Password';
 			}
+			
+			# Create normalised version of auth system name to ensure valid form name
+			$authSystemNameToken = preg_replace ('/[^a-z]/', '', mb_strtolower ($authSystemName));
+			
 			$html .= "\n<div class=\"{$boxClass}\">";
-			$html .= "\n<h3 id=\"add" . strtolower ($authSystemName) . "\">Add an administrator ({$authSystemName} login)</h3>";
+			$html .= "\n<h3 id=\"add" . strtolower ($authSystemNameToken) . "\">Add an administrator ({$authSystemName} login)</h3>";
 			$form = new form (array (
-				'name' => 'add' . strtolower ($authSystemName),
-				'submitTo' => '#add' . strtolower ($authSystemName),
+				'name' => 'add' . strtolower ($authSystemNameToken),
+				'submitTo' => '#add' . strtolower ($authSystemNameToken),
 				'formCompleteText' => false,
 				'div' => false,
 				'databaseConnection'	=> $this->databaseConnection,
