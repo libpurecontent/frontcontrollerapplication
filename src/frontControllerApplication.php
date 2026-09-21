@@ -2818,7 +2818,7 @@ class frontControllerApplication
 			
 			# Insert/update the data; insert with ON DUPLICATE KEY is not used due to incompatibility with PostgreSQL
 			if ($alreadyPresent) {
-				$this->databaseConnection->update ($dataPool, $this->settings['settingsTable'], $result);
+				$this->databaseConnection->update ($dataPool, $this->settings['settingsTable'], $result, array ('id' => 1));
 			} else {
 				$this->databaseConnection->insert ($dataPool, $this->settings['settingsTable'], $result);
 			}
