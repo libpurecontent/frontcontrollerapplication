@@ -2809,8 +2809,19 @@ class frontControllerApplication
 			# Add in fixed data
 			$result['id'] = 1;
 			
-			# Insert/update the data
-			$this->databaseConnection->insert ($this->settings['database'], $this->settings['settingsTable'], $result, $onDuplicateKeyUpdate = true);
+			# Specify the database name; Postgres requires a schema rather than database
+			$dataPool = $this->settings['database'];
+			if ($this->settings['vendor'] == 'pgsql') {$dataPool = 'public';}	// #!# For now assume the current database and a schema 'public'
+			
+			# Determine if the settings row is already present
+			$alreadyPresent = $this->databaseConnection->getTotal ($dataPool, $this->settings['settingsTable']);
+			
+			# Insert/update the data; insert with ON DUPLICATE KEY is not used due to incompatibility with PostgreSQL
+			if ($alreadyPresent) {
+				$this->databaseConnection->update ($dataPool, $this->settings['settingsTable'], $result);
+			} else {
+				$this->databaseConnection->insert ($dataPool, $this->settings['settingsTable'], $result);
+			}
 			
 			# Confirm success
 			$html = "\n<p><img src=\"/images/icons/tick.png\" class=\"icon\" alt=\"\" /> The settings have been updated.</p>" . $html;
