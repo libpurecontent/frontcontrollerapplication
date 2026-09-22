@@ -10,7 +10,7 @@
         }
     ],
     "require": {
-        "libpurecontent/application": "^1.9",
+        "libpurecontent/application": "^1.10",
         "libpurecontent/database": "^4.3",
         "libpurecontent/ultimateform": "^1.31",
         "libpurecontent/useraccount": "^1.12",

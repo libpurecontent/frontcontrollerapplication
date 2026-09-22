@@ -783,7 +783,7 @@ class frontControllerApplication
 		
 		# Show debugging information if required
 		if ($this->settings['debug']) {
-			$this->html .= application::dumpData ($_GET, false, $return = true);
+			$this->html .= application::dumpData ($_GET, true);
 		}
 		
 		# Determine the action to use - the 'method' keyword is used to work around name clashes with reserved PHP keywords, e.g. clone.html -> clone -> clonearticle (as 'clone' is a PHP keyword so cannot be used as a method name)
@@ -817,7 +817,6 @@ class frontControllerApplication
 					$this->html .= $output;
 				}
 			}
-			
 		}
 		
 		# End with a div if not an export type
@@ -3759,7 +3758,7 @@ class frontControllerApplication
 		$result = "\n" . implode ("\n", $lines);
 		
 		# Surround as print_r
-		$html = application::dumpData ($result, false, $return = true);
+		$html = application::dumpData ($result, true);
 		
 		# Return the HTML
 		return $html;
@@ -3771,7 +3770,7 @@ class frontControllerApplication
 	{
 		# Add on database error information if present
 		if ($this->settings['useDatabase'] && ($databaseModeData !== false)) {
-			$adminMessage .= "\n\nThe database said:\n" . application::dumpData ($this->databaseConnection->error (), false, $return = true);
+			$adminMessage .= "\n\nThe database said:\n" . application::dumpData ($this->databaseConnection->error (), true);
 		}
 		
 		# E-mail the error to the administrator (unless the user is an administrator)
