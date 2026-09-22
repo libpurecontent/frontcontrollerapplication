@@ -3736,7 +3736,7 @@ class frontControllerApplication
 	{
 		# Add on database error information if present
 		if ($this->settings['useDatabase'] && ($databaseModeData !== false)) {
-			$adminMessage .= "\n\nThe database said:\n" . application::dumpData ($this->databaseConnection->error (), true);
+			$adminMessage .= "\n\nThe database said:\n" . application::dumpData ($this->databaseConnection->error (), false, $return = true);
 		}
 		
 		# E-mail the error to the administrator (unless the user is an administrator)
