@@ -1,7 +1,6 @@
 <?php
 
 
-#!# Add flag to add an 'admins can create users' flag option
 #!# Needs a legacyEchoOutput to echo rather than return HTML, initially false then make default
 
 
