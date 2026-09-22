@@ -1,13 +1,10 @@
 <?php
 
-
-#!# Needs a legacyEchoOutput to echo rather than return HTML, initially false then make default
-
-
 # Front Controller pattern application
 class frontControllerApplication
 {
 	# Class properties
+	private $html = '';
 	protected $baseUrl;
 	protected $imageStoreRoot;
 	protected $applicationRoot;
@@ -51,6 +48,7 @@ class frontControllerApplication
 			'applicationName'								=> application::unCamelCase (get_class ($this)),
 			'enabled'										=> true,		// Whether this application is enabled
 			'authentication' 								=> false,		// Whether all pages require authentication
+			'echoOutputDirectly'							=> true,		// Whether to show output directly (legacy), or assign to HTML for return; in a future release this will default to false
 			'dataDisableAuth'								=> false,		// Whether to disable auth on the data function (only relevant when using authentication=true); this can cause logout due to fast cookie transfer
 			'loginMessageHtml'								=> false,		// Extra message for login page, e.g. to clarify what type of account needed, etc.
 			'authLinkVisibility'							=> true,		// Whether the auth link is visible (true/false or regexp for matching REMOTE_ADDR)
@@ -348,7 +346,8 @@ class frontControllerApplication
 		
 		# End if not enabled
 		if (!$this->settings['enabled']) {
-			echo $this->page404 ();
+			$this->html .= $this->page404 ();
+			if ($this->settings['echoOutputDirectly']) {echo $this->html;}
 			return false;
 		}
 		
@@ -379,7 +378,7 @@ class frontControllerApplication
 		}
 		
 		# Show header if required
-		echo $header;
+		$this->html .= $header;
 		
 		# Set a lockfile location
 		$this->lockfile = $_SERVER['DOCUMENT_ROOT'] . $this->baseUrl . '/lockfile.txt';
@@ -398,8 +397,9 @@ class frontControllerApplication
 		
 		# Ensure the version of PHP is supported
 		if (version_compare (PHP_VERSION, $this->settings['minimumPhpVersion'], '<')) {
-			echo $this->throwError (3, "PHP version needs to be at least: {$this->settings['minimumPhpVersion']}");
-			echo $footer;
+			$this->html .= $this->throwError (3, "PHP version needs to be at least: {$this->settings['minimumPhpVersion']}");
+			$this->html .= $footer;
+			if ($this->settings['echoOutputDirectly']) {echo $this->html;}
 			return false;
 		}
 		
@@ -413,8 +413,9 @@ class frontControllerApplication
 		if ($this->settings['useDatabase']) {
 			$this->databaseConnection = new database ($this->settings['hostname'], $this->settings['username'], $this->settings['password'], $this->settings['database'], $this->settings['vendor'], $this->settings['logfile'], $userAtInitialDatabaseConnection /* If using localAuth, will be set later */, $this->settings['nativeTypes']);
 			if (!$this->databaseConnection->connection) {
-				echo $this->databaseConnection->reportError ($this->settings['administratorEmail'], $this->settings['applicationName']);
-				echo $footer;
+				$this->html .= $this->databaseConnection->reportError ($this->settings['administratorEmail'], $this->settings['applicationName']);
+				$this->html .= $footer;
+				if ($this->settings['echoOutputDirectly']) {echo $this->html;}
 				return false;
 			}
 			
@@ -442,14 +443,15 @@ class frontControllerApplication
 		}
 		
 		# Set user and attributes ($this->user, $this->userEmail, $this->userVisibleIdentifier)
-		echo $this->assignUser ();
+		$this->html .= $this->assignUser ();
 		
 		# Setup the database if required
 		if ($this->settings['useDatabase']) {
 			if (method_exists ($this, 'databaseStructure')) {
 				if (!$this->databaseSetup ($html)) {
-					echo $html;
-					echo $footer;
+					$this->html .= $html;
+					$this->html .= $footer;
+					if ($this->settings['echoOutputDirectly']) {echo $this->html;}
 					return true;
 				}
 			}
@@ -478,10 +480,11 @@ class frontControllerApplication
 		# Additional processing, before actions processing phase, if required
 		if (method_exists ($this, 'mainPreActions')) {
 			if ($this->mainPreActions () === false) {
-				if ($this->settings['div']) {echo "\n<div id=\"{$this->settings['div']}\">\n";}
+				if ($this->settings['div']) {$this->html .= "\n<div id=\"{$this->settings['div']}\">\n";}
 				$endDiv = ($this->settings['div'] ? "\n</div>" : '');
-				echo $endDiv;
-				echo $footer;
+				$this->html .= $endDiv;
+				$this->html .= $footer;
+				if ($this->settings['echoOutputDirectly']) {echo $this->html;}
 				return false;
 			}
 		}
@@ -491,7 +494,7 @@ class frontControllerApplication
 		
 		# Add user-switching UI control if required; this must be run after the $this->userIsAdministrator phase and after mainPreActions in case that sets required properties
 		if ($this->settings['userSwitcherUsers']) {
-			echo $this->userSwitcher ();
+			$this->html .= $this->userSwitcher ();
 		}
 		
 		# Get the available actions
@@ -520,7 +523,7 @@ class frontControllerApplication
 		# Load jQuery if required
 		if (!$this->exportType) {
 			if ($this->settings['jQuery']) {
-				echo "\n\n\n<!-- jQuery -->\n" . '<script type="text/javascript" src="//code.jquery.com/jquery.min.js"></script>' . "\n\n";
+				$this->html .= "\n\n\n<!-- jQuery -->\n" . '<script type="text/javascript" src="//code.jquery.com/jquery.min.js"></script>' . "\n\n";
 			}
 		}
 		
@@ -530,7 +533,7 @@ class frontControllerApplication
 				$stylesheet = $this->applicationRoot . $this->settings['applicationStylesheet'];
 				if (is_readable ($stylesheet)) {
 					$styles = file_get_contents ($stylesheet);
-					echo "\n\n" . '<style type="text/css">' . "\n\t" . str_replace ("\n", "\n\t", trim ($styles)) . "\n</style>\n";
+					$this->html .= "\n\n" . '<style type="text/css">' . "\n\t" . str_replace ("\n", "\n\t", trim ($styles)) . "\n</style>\n";
 				}
 			}
 		}
@@ -545,7 +548,7 @@ class frontControllerApplication
 		}
 		
 		# Start a div if required to hold the application and define the ending div
-		if ($this->settings['div']) {echo "\n<div id=\"{$this->settings['div']}\">\n";}
+		if ($this->settings['div']) {$this->html .= "\n<div id=\"{$this->settings['div']}\">\n";}
 		$endDiv = ($this->settings['div'] ? "\n</div>" : '');
 		
 		# Determine if this action has parent action, and if so, what it is
@@ -571,8 +574,9 @@ class frontControllerApplication
 		
 		# End if no valid action selected
 		if (!$this->action || !array_key_exists ($this->action, $this->actions)) {
-			echo $this->page404 ();
-			echo $footer;
+			$this->html .= $this->page404 ();
+			$this->html .= $footer;
+			if ($this->settings['echoOutputDirectly']) {echo $this->html;}
 			return false;
 		}
 		
@@ -608,10 +612,11 @@ class frontControllerApplication
 		
 		# Redirect to the page requested if necessary
 		if (!$this->loginLogic ($formHtml /* returned by reference */)) {
-			echo $headerHtml;
-			echo $formHtml;
-			echo $endDiv;
-			echo $footer;
+			$this->html .= $headerHtml;
+			$this->html .= $formHtml;
+			$this->html .= $endDiv;
+			$this->html .= $footer;
+			if ($this->settings['echoOutputDirectly']) {echo $this->html;}
 			return false;
 		}
 		
@@ -638,7 +643,7 @@ class frontControllerApplication
 		
 		# Show the header/tabs
 		if (!$this->exportType) {
-			echo $headerHtml;
+			$this->html .= $headerHtml;
 		}
 		
 		# Require authentication for actions that require this
@@ -678,18 +683,19 @@ class frontControllerApplication
 				
 				# Show login requirement text
 				if ($this->settings['authentication']) {
-					echo "\n<p>Welcome.</p>";
+					$this->html .= "\n<p>Welcome.</p>";
 				}
-				echo "\n" . $loginTextHtml;
+				$this->html .= "\n" . $loginTextHtml;
 				if ($this->settings['loginMessageHtml']) {
-					echo "\n<br />" . $this->settings['loginMessageHtml'];
+					$this->html .= "\n<br />" . $this->settings['loginMessageHtml'];
 				}
 				if ($this->settings['idpAuth']) {
 				}
 				
 				# End execution
-				echo $endDiv;
-				echo $footer;
+				$this->html .= $endDiv;
+				$this->html .= $footer;
+				if ($this->settings['echoOutputDirectly']) {echo $this->html;}
 				return false;
 			}
 		}
@@ -697,15 +703,17 @@ class frontControllerApplication
 		# Check administrator credentials if necessary
 		if (isSet ($this->actions[$this->action]['administrator']) && ($this->actions[$this->action]['administrator'])) {
 			if ($this->restrictedAdministrator) {
-				echo "\n<p><strong>You need to be logged on as a full, unrestricted administrator to access this section.</p>";
-				echo $endDiv;
-				echo $footer;
+				$this->html .= "\n<p><strong>You need to be logged on as a full, unrestricted administrator to access this section.</p>";
+				$this->html .= $endDiv;
+				$this->html .= $footer;
+				if ($this->settings['echoOutputDirectly']) {echo $this->html;}
 				return false;
 			} else {
 				if (!$this->userIsAdministrator) {
-					echo "\n<p><strong>You need to be logged on as an administrator to access this section.</strong></p>";
-					echo $endDiv;
-					echo $footer;
+					$this->html .= "\n<p><strong>You need to be logged on as an administrator to access this section.</strong></p>";
+					$this->html .= $endDiv;
+					$this->html .= $footer;
+					if ($this->settings['echoOutputDirectly']) {echo $this->html;}
 					return false;
 				}
 			}
@@ -714,9 +722,10 @@ class frontControllerApplication
 		# Check restricted administrator credentials if necessary
 		if (isSet ($this->actions[$this->action]['restrictedAdministrator']) && ($this->actions[$this->action]['restrictedAdministrator'])) {
 			if (!$this->userIsAdministrator && !$this->restrictedAdministrator) {
-				echo "\n<p><strong>You need to be logged on as an restricted administrator to access this section.</strong></p>";
-				echo $endDiv;
-				echo $footer;
+				$this->html .= "\n<p><strong>You need to be logged on as an restricted administrator to access this section.</strong></p>";
+				$this->html .= $endDiv;
+				$this->html .= $footer;
+				if ($this->settings['echoOutputDirectly']) {echo $this->html;}
 				return false;
 			}
 		}
@@ -726,12 +735,13 @@ class frontControllerApplication
 			$privilegeProperty = $this->actions[$this->action]['privilege'];
 			if (!$this->userIsAdministrator && !$this->$privilegeProperty) {	// Assumes that restrictedAdministrator is not enough
 				if ($this->user) {
-					echo "\n<p><strong>You do not have the required privilege to access this section.</strong></p>";
+					$this->html .= "\n<p><strong>You do not have the required privilege to access this section.</strong></p>";
 				} else {
-					echo "\n<p><strong>Please log in so that you can access this facility.</strong></p>";
+					$this->html .= "\n<p><strong>Please log in so that you can access this facility.</strong></p>";
 				}
-				echo $endDiv;
-				echo $footer;
+				$this->html .= $endDiv;
+				$this->html .= $footer;
+				if ($this->settings['echoOutputDirectly']) {echo $this->html;}
 				return false;
 			}
 		}
@@ -760,16 +770,20 @@ class frontControllerApplication
 		
 		# Additional processing if required
 		if (method_exists ($this, 'main')) {
-			if ($this->main () === false) {
-				echo $endDiv;
-				echo $footer;
+			$mainHtml = '';
+			$resultMain = $this->main ($mainHtml /* returned by reference, if defined by client application code at all */);
+			$this->html .= $mainHtml;
+			if ($resultMain === false) {
+				$this->html .= $endDiv;
+				$this->html .= $footer;
+				if ($this->settings['echoOutputDirectly']) {echo $this->html;}
 				return false;
 			}
 		}
 		
 		# Show debugging information if required
 		if ($this->settings['debug']) {
-			application::dumpData ($_GET);
+			$this->html .= application::dumpData ($_GET, false, $return = true);
 		}
 		
 		# Determine the action to use - the 'method' keyword is used to work around name clashes with reserved PHP keywords, e.g. clone.html -> clone -> clonearticle (as 'clone' is a PHP keyword so cannot be used as a method name)
@@ -783,30 +797,50 @@ class frontControllerApplication
 		
 		# Perform the action
 		if (!$disableAutoGui) {
-
-			# Determine if a function is built in to this library, rather than being defined by client code
-			$internalFunctions = get_class_methods ('frontControllerApplication');		// Specific named class means that methods of extended classes will not be included, i.e. is strictly this class internally only
-			$isBuiltIn = (in_array ($this->doAction, $internalFunctions));
 			
-			# Perform the action (normal mode)
-			if ($isBuiltIn) {
-				echo $this->performAction ($this->doAction, $this->item);
+			# Determine if a function is built in to this library, rather than being defined by client code
+			$reflection = new ReflectionMethod ($this, $this->doAction);
+			$declaringClass = $reflection->getDeclaringClass ()->getName ();	// Will be either the client application code class, or FCA for a built-in, non-overriden function
+			$isBuiltInAndNotOverriden = ($declaringClass == __CLASS__);		// Check against frontControllerApplication
+			
+			# Perform the action (normal mode); built-in functions run directly from this class always return HTML; client application code -defined functions may be set to echo or return THML
+			if ($isBuiltInAndNotOverriden) {
+				$this->html .= $this->performAction ($this->doAction, $this->item);		// Built-in pages always return HTML as of v1.18.0
 			} else {
-				$this->performAction ($this->doAction, $this->item);
+				if ($this->settings['echoOutputDirectly']) {
+					echo $this->html;
+					$this->html = '';	// Reset for remainder
+					// The performAction call will then be echoed also:
+				}
+				$output = $this->performAction ($this->doAction, $this->item);
+				if (!$this->settings['echoOutputDirectly']) {
+					$this->html .= $output;
+				}
 			}
 			
 		}
 		
 		# End with a div if not an export type
 		if (!$this->exportType) {
-			echo $endDiv;
-			echo $footer;
+			$this->html .= $endDiv;
+			$this->html .= $footer;
 		}
 		
 		# Run the shutdown (actually post-action) function if one has been defined
 		if (method_exists ($this, 'shutdown')) {
 			$this->shutdown ();
 		}
+		
+		# End
+		// $this->html will now be assigned, and available via getHtml ()
+		if ($this->settings['echoOutputDirectly']) {echo $this->html;}
+	}
+	
+	
+	# Getter for HTML
+	public function getHtml ()
+	{
+		return $this->html;		// This will be populated if echoOutputDirectly is on
 	}
 	
 	
@@ -3299,10 +3333,12 @@ class frontControllerApplication
 		#!# Currently this is visible within the tabs
 		if ($this->settings['page404']) {
 			if ($includePureContentHeaderFooter) {
+				#!# Need to resolve this for echoOutputDirectly
 				include ('pureContentWrapper.php');
 			}
 			include ($this->settings['page404']);
 			if ($includePureContentHeaderFooter) {
+				#!# Need to resolve this for echoOutputDirectly
 				include ('sitetech/appended.html');
 			}
 		} else {
