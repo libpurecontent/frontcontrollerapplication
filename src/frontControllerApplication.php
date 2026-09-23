@@ -479,7 +479,10 @@ class frontControllerApplication
 		
 		# Additional processing, before actions processing phase, if required
 		if (method_exists ($this, 'mainPreActions')) {
-			if ($this->mainPreActions () === false) {
+			$mainPreActionsHtml = '';
+			$resultMainPreActions = $this->mainPreActions ($mainPreActionsHtml /* returned by reference, if defined by client application code at all */);
+			$this->html .= $mainPreActionsHtml;
+			if ($resultMainPreActions === false) {
 				if ($this->settings['div']) {$this->html .= "\n<div id=\"{$this->settings['div']}\">\n";}
 				$endDiv = ($this->settings['div'] ? "\n</div>" : '');
 				$this->html .= $endDiv;
