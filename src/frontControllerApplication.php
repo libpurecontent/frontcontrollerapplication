@@ -799,9 +799,13 @@ class frontControllerApplication
 		if (!$disableAutoGui) {
 			
 			# Determine if a function is built in to this library, rather than being defined by client code
-			$reflection = new ReflectionMethod ($this, $this->doAction);
-			$declaringClass = $reflection->getDeclaringClass ()->getName ();	// Will be either the client application code class, or FCA for a built-in, non-overriden function
-			$isBuiltInAndNotOverriden = ($declaringClass == __CLASS__);		// Check against frontControllerApplication
+			if (method_exists ($this, $this->doAction)) {	// If autoAction is on, then the method may not exist
+				$reflection = new ReflectionMethod ($this, $this->doAction);
+				$declaringClass = $reflection->getDeclaringClass ()->getName ();	// Will be either the client application code class, or FCA for a built-in, non-overriden function
+				$isBuiltInAndNotOverriden = ($declaringClass == __CLASS__);		// Check against frontControllerApplication
+			} else {
+				$isBuiltInAndNotOverriden = false;
+			}
 			
 			# Perform the action (normal mode); built-in functions run directly from this class always return HTML; client application code -defined functions may be set to echo or return THML
 			if ($isBuiltInAndNotOverriden) {
