@@ -16,7 +16,7 @@
         "libpurecontent/useraccount": "^1.12",
         "libpurecontent/directories": "^1.4",
         "smarty/smarty": "^5.8",
-        "camunigeography/camunidata": "^2.1",
+        "camunigeography/camunidata": "^2.2",
         "libpurecontent/sinenomine": "^1.2"
     },
     "autoload": {

@@ -34,6 +34,8 @@ class frontControllerApplication
 	protected $idpUser = NULL;
 	protected $userName;
 	protected $userPhone;
+	protected $userIsStudent;
+	protected $userIsStaff;
 	protected $year;
 	protected $templateHandle;
 	protected $doAction;
@@ -752,6 +754,8 @@ class frontControllerApplication
 		# Get the user's details
 		$this->userName = false;
 		$this->userPhone = false;
+		$this->userIsStudent = NULL;	// Unknown
+		$this->userIsStaff = NULL;		// Unknown
 		if ($this->settings['useCamUniLookup']) {
 			$isCronUser = ($this->settings['cronUsername'] && ($this->user == $this->settings['cronUsername']));
 			if ($this->user && !$isCronUser) {
@@ -761,6 +765,8 @@ class frontControllerApplication
 						$this->userEmail = $person['email'];	// Overwrite if set
 					}
 					$this->userPhone = $person['telephone'];
+					$this->userIsStudent = $person['student'];
+					$this->userIsStaff = $person['student'];
 				}
 			}
 		}
