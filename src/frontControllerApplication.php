@@ -1449,8 +1449,8 @@ class frontControllerApplication
 				}
 			}
 			
-			# Make up the URL if not supplied
-			if (!isSet ($attributes['url'])) {$attributes['url'] = "{$action}.html";}
+			# Construct the URL if not specifically defined
+			if (!isSet ($attributes['url'])) {$attributes['url'] = $action . ($this->settings['urlsDefaultEndingSlash'] ? '/' : '.html');}
 			
 			# Skip if it's an ID-based article but there is no item
 			if (!$this->item && substr_count ($attributes['url'], '%id')) {continue;}
