@@ -74,6 +74,7 @@ class frontControllerApplication
 			'jQuery'										=> false,	// Whether to load jQuery
 			'peopleDatabase'								=> 'people',
 			'table'											=> NULL,
+			'urlsDefaultEndingSlash'						=> false,	// Whether to use / rather than .html as auto-URL endings for client-defined pages, e.g. /about/ rather than /about.html
 			'administrators'								=> false,	// Administrators table e.g. 'administrators' or 'facility.administrators', or an array of usernames; true will use the default, 'administrators'
 			'autoAction'									=> false,	// Instead of defining every action, always run an autoAction function defined in client code
 			'settingsTable'									=> 'settings',	// Settings table (must be in the main database) e.g. 'settings' or false to disable (only needed a table of that name is present for a different purpose)
@@ -1196,8 +1197,8 @@ class frontControllerApplication
 			# Determine if the tab should be marked current (i.e. current page is in this section
 			$isCurrent = (($action == $current) || ($action == $this->parentAction));
 			
-			# Make up the URL if not supplied
-			if (!isSet ($attributes['url'])) {$this->actions[$action]['url'] = "{$action}.html";}
+			# Construct the URL if not specifically defined
+			if (!isSet ($attributes['url'])) {$this->actions[$action]['url'] = $action . ($this->settings['urlsDefaultEndingSlash'] ? '/' : '.html');}
 			
 			# Assemble the URL, adding the base URL in the usual case of not being an absolute URL
 			$url = ((substr ($this->actions[$action]['url'], 0, 1) == '/') ? '' : $this->baseUrl . '/') . $this->actions[$action]['url'];
