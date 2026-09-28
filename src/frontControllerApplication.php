@@ -767,7 +767,7 @@ class frontControllerApplication
 					}
 					$this->userPhone = $person['telephone'];
 					$this->userIsStudent = $person['student'];
-					$this->userIsStaff = $person['student'];
+					$this->userIsStaff = $person['staff'];
 				}
 			}
 		}
