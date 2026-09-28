@@ -752,23 +752,27 @@ class frontControllerApplication
 			}
 		}
 		
-		# Get the user's details
+		# Get the user's details, where these are possible to retrieve
 		$this->userName = false;
 		$this->userPhone = false;
 		$this->userIsStudent = NULL;	// Unknown
 		$this->userIsStaff = NULL;		// Unknown
-		if ($this->settings['useCamUniLookup']) {
-			$isCronUser = ($this->settings['cronUsername'] && ($this->user == $this->settings['cronUsername']));
-			if ($this->user && !$isCronUser) {
-				if ($person = camUniData::lookupUser ($this->user)) {
-					$this->userName = $person['name'];
-					if ($person['email']) {
-						$this->userEmail = $person['email'];	// Overwrite if set
+		if ($this->user) {
+			if ($this->idpUser) {
+				if ($this->settings['useCamUniLookup']) {
+					if ($person = camUniData::lookupUser ($this->user)) {
+						$this->userName = $person['name'];
+						if ($person['email']) {
+							$this->userEmail = $person['email'];    // Overwrite if set
+						}
+						$this->userPhone = $person['telephone'];
+						$this->userIsStudent = $person['student'];
+						$this->userIsStaff = $person['staff'];
 					}
-					$this->userPhone = $person['telephone'];
-					$this->userIsStudent = $person['student'];
-					$this->userIsStaff = $person['staff'];
 				}
+			} else {        // Non-IdP users are explicitly external and so are neither students or staff
+				$this->userIsStudent = false;
+				$this->userIsStaff = false;
 			}
 		}
 		
