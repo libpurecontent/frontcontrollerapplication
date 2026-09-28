@@ -445,10 +445,7 @@ class frontControllerApplication
 			}
 		}
 		
-		# Set user and attributes ($this->user, $this->userEmail, $this->userVisibleIdentifier)
-		$this->html .= $this->assignUser ();
-		
-		# Setup the database if required
+		# Set up the database if required
 		if ($this->settings['useDatabase']) {
 			if (method_exists ($this, 'databaseStructure')) {
 				if (!$this->databaseSetup ($html)) {
@@ -460,13 +457,16 @@ class frontControllerApplication
 			}
 		}
 		
+		# Get the settings from the settings table, if required
+		$this->addSettingsTableConfig ();
+		
+		# Set user and attributes ($this->user, $this->userEmail, $this->userVisibleIdentifier)
+		$this->html .= $this->assignUser ();
+		
 		# Get the administrators and determine if the user is an administrator
 		#!# Should disable system or force entry if no administrators
 		$this->administrators = $this->getAdministrators ();
 		$this->userIsAdministrator = $this->userIsAdministrator ();
-		
-		# Get the settings from the settings table, if required
-		$this->addSettingsTableConfig ();
 		
 		# Get the profile from the profiles table, if required
 		$this->profile = $this->getProfile ();
