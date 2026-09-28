@@ -88,7 +88,7 @@ class frontControllerApplication
 			'webmasterContactAddress'						=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),
 			#!# Needs to be specifiable as string "a, b", so that multiple e-mail addresses from a database table can all be in the To: field; currently array can be specified, but that becomes To,cc[,cc...]
 			'feedbackRecipient'								=> (isSet ($_SERVER['SERVER_ADMIN']) ? $_SERVER['SERVER_ADMIN'] : NULL),	#!# This ought to be the value of administratorEmail by default
-			'useCamUniLookup'								=> true,
+			'useCamUniLookup'								=> true,	// Can also be set on a per-action basis, overriding this value
 			'directoryIndex'								=> 'index.html',					# The directory index, used for local file retrieval
 			'userAgent'										=> 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',	# The user-agent string used for external retrieval
 			'emailDomain'									=> 'cam.ac.uk',
@@ -752,6 +752,11 @@ class frontControllerApplication
 			}
 		}
 		
+		# Enable/disable camUniLookup on an action-specific basis if defined for that action, overriding main setting
+		if (isSet ($this->actions[$this->action]['useCamUniLookup'])) {
+			$this->settings['useCamUniLookup'] = $this->actions[$this->action]['useCamUniLookup'];
+		}
+
 		# Get the user's details, where these are possible to retrieve
 		$this->userName = false;
 		$this->userPhone = false;
