@@ -1252,20 +1252,11 @@ class frontControllerApplication
 			}
 		} else {
 			
-			# End if on the login page
-//			if ($this->action == 'login') {return true;}
-			
-			# If using localAuth, this has to be temporarily switched to HTTP auth, to avoid the chicken-and-egg situation of not having an account to set up the tables, but there not being a user table
-//			if ($this->settings['localAuth']) {$this->settings['localAuth'] = false;}
-			
 			# Start the HTML
 			$html  = "\n<h2>Set up database</h2>";
 			
-			# Ensure the user is logged in
-//			$location = htmlspecialchars ($_SERVER['REQUEST_URI']);	// Note that this will not maintain any #anchor, because the server doesn't see any hash: http://stackoverflow.com/questions/940905
-//			$loginTextLink = "You are not currently logged in</a>";
-			$html .= "\n<p>The database is not yet set up. The site administrator needs to " . /* ($this->user ? */ "enter the database system password below." /* : "<a href=\"{$this->baseUrl}/login.html?{$location}\">log in</a> first.") */ . '</p>';
-//			if (!$this->user) {return false;}
+			# The admin needs to provide the root password
+			$html .= "\n<p>The database is not yet set up. The site administrator needs to enter the database system password below.</p>";
 			
 			# Request the root database credentials
 			$form = new form (array (
