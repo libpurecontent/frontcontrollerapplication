@@ -107,6 +107,7 @@ class frontControllerApplication
 			'localAuthTable'								=> 'users',		// In localAuth, table name
 			'localAuthUsernames'							=> false,		// Whether in localAuth to use usernames (necessary only for social applications, where friendly profile URLs are needed)
 			'localAuthVisibleNames'							=> false,		// Whether in localAuth there is a visible name field
+			'localAuthVisibleNamesLabel'					=> 'Visible name',
 			'localAuthPasswordRequiresLettersAndNumbers'	=> true,		// Whether the localAuth password requires both letters and numbers
 			'localAuthPrivacyPolicy'						=> false,
 			'localAuthSaltLegacyHashes'						=> false,		// Legacy salt used for localAuth (was '%_salt' in earlier version of this library), no longer necessary
@@ -1569,6 +1570,7 @@ class frontControllerApplication
 			'administratorEmail'				=> $this->settings['administratorEmail'],
 			'usernames'							=> $this->settings['localAuthUsernames'],
 			'visibleNames'						=> $this->settings['localAuthVisibleNames'],
+			'visibleNamesLabel'					=> $this->settings['localAuthVisibleNamesLabel'],
 			'passwordRequiresLettersAndNumbers'	=> $this->settings['localAuthPasswordRequiresLettersAndNumbers'],
 			'privacyPolicy'						=> $this->settings['localAuthPrivacyPolicy'],
 			'loginMessageHtml'					=> $this->settings['loginMessageHtml'],
