@@ -32,7 +32,7 @@ class frontControllerApplication
 	protected $parentAction;
 	protected $isParentAction;
 	protected $idpUser = NULL;
-	protected $userName;
+	protected $userName = false;
 	protected $userPhone;
 	protected $userIsStudent;
 	protected $userIsStaff;
@@ -759,7 +759,6 @@ class frontControllerApplication
 		}
 
 		# Get the user's details, where these are possible to retrieve
-		$this->userName = false;
 		$this->userPhone = false;
 		$this->userIsStudent = NULL;	// Unknown
 		$this->userIsStaff = NULL;		// Unknown
@@ -1539,6 +1538,7 @@ class frontControllerApplication
 			if ($localAuthUser = $this->localAuthClass->getUserId ()) {
 				$this->user = $localAuthUser;	// Numeric user ID
 				$this->userEmail = $this->localAuthClass->getUserEmail ();
+				$this->userName = $this->localAuthClass->getUserName ();
 				$this->userVisibleIdentifier = $this->localAuthClass->getUserEmail ();
 				if ($this->settings['useDatabase']) {
 					$this->databaseConnection->setUserForLogging ($this->userEmail);	// As we could not do this when creating the database connection, since at that point the user obviously did not exist
