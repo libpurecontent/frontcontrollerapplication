@@ -53,7 +53,7 @@
 	
 	# Output buffering
 	<Location $baseUrl>
-		php_value output_buffering 65536
+		php_value output_buffering 524288
 	</Location>
 	
 	<LocationMatch $baseUrldata\.(html|json|xml)>
