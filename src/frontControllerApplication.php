@@ -1727,8 +1727,8 @@ class frontControllerApplication
 					if (!preg_match ('/(html|richtext)/i', $fieldname)) {
 						
 						# Split lines out
-						$overwrittenSetting = trim ($settingsFromTable[$fieldname]);
-						$overwrittenSetting = (strlen ($overwrittenSetting) ? preg_split ("/\s*\r?\n\t*\s*/", $overwrittenSetting) : array ());
+						$overwrittenSetting = (!is_null ($settingsFromTable[$fieldname]) ? trim ($settingsFromTable[$fieldname]) : $settingsFromTable[$fieldname]);
+						$overwrittenSetting = (!is_null ($settingsFromTable[$fieldname]) && strlen ($overwrittenSetting) ? preg_split ("/\s*\r?\n\t*\s*/", $overwrittenSetting) : array ());
 						
 						# Overwrite the original setting
 						$this->settings[$fieldname] = $overwrittenSetting;
