@@ -39,6 +39,7 @@ class frontControllerApplication
 	protected $year;
 	protected $templateHandle;
 	protected $doAction;
+	protected $exportsDirectory;
 	
 	
 	
