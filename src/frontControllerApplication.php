@@ -1870,7 +1870,7 @@ class frontControllerApplication
 				$loginTextLink = "You are not currently <a href=\"{$loginUrlIdp}?{$location}\" rel=\"nofollow\">logged in</a>";
 			}
 			if ($this->settings['localAuth']) {
-				$loginTextLink = "You are not currently <a href=\"{$this->baseUrl}/{$loginUrlLocalAuth}?{$location}\" rel=\"nofollow\">logged in</a>";
+				$loginTextLink = "You are not currently <a href=\"{$loginUrlLocalAuth}?{$location}\" rel=\"nofollow\">logged in</a>";
 			}
 			if ($this->settings['idpAuth'] && $this->settings['localAuth']) {
 				$loginTextLink = "Log in with <a href=\"{$loginUrlIdp}?{$location}\" rel=\"nofollow\">[{$this->settings['idpName']} login]</a> or <a href=\"{$loginUrlLocalAuth}?{$location}\" rel=\"nofollow\">[{$this->settings['localAuthName']} login]</a>";
