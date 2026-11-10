@@ -110,6 +110,7 @@ class frontControllerApplication
 			'localAuthVisibleNames'							=> false,		// Whether in localAuth there is a visible name field
 			'localAuthVisibleNamesLabel'					=> 'Visible name',
 			'localAuthPasswordRequiresLettersAndNumbers'	=> true,		// Whether the localAuth password requires both letters and numbers
+			'localAuthSessionLogging'						=> false,		// Whether to enable session logging
 			'localAuthPrivacyPolicy'						=> false,
 			'localAuthSaltLegacyHashes'						=> false,		// Legacy salt used for localAuth (was '%_salt' in earlier version of this library), no longer necessary
 			'authFileGroup'									=> false,		// Whether to write an auth file containing the administrators, and if so, what group name (or true, which will allocate 'administrators')
@@ -1573,6 +1574,7 @@ class frontControllerApplication
 			'visibleNames'						=> $this->settings['localAuthVisibleNames'],
 			'visibleNamesLabel'					=> $this->settings['localAuthVisibleNamesLabel'],
 			'passwordRequiresLettersAndNumbers'	=> $this->settings['localAuthPasswordRequiresLettersAndNumbers'],
+			'sessionLogging'					=> $this->settings['localAuthSessionLogging'],
 			'privacyPolicy'						=> $this->settings['localAuthPrivacyPolicy'],
 			'loginMessageHtml'					=> $this->settings['loginMessageHtml'],
 			'saltLegacyHashes'					=> $this->settings['localAuthSaltLegacyHashes'],
