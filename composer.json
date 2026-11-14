@@ -11,7 +11,7 @@
     ],
     "require": {
         "libpurecontent/application": "^1.10",
-        "libpurecontent/database": "^4.10",
+        "libpurecontent/database": "^4.11",
         "libpurecontent/ultimateform": "^1.34",
         "libpurecontent/useraccount": "^1.12",
         "libpurecontent/directories": "^1.4",

@@ -1559,14 +1559,10 @@ class frontControllerApplication
 	# Function to provide cookie-based local auth
 	private function loadLocalAuth ()
 	{
-		# Specify the database name; Postgres requires a schema rather than database
-		$dataPool = $this->settings['database'];
-		if ($this->settings['vendor'] == 'pgsql') {$dataPool = 'public';}	// #!# For now assume the current database and a schema 'public'
-		
 		# Assemble the settings to use
 		$localAuthSettings = array (
 			'baseUrl'							=> $this->baseUrl,
-			'database'							=> $dataPool,
+			'database'							=> $this->settings['database'],
 			'table'								=> $this->settings['localAuthTable'],
 			'applicationName'					=> $this->settings['applicationName'],
 			'administratorEmail'				=> $this->settings['administratorEmail'],
@@ -1604,28 +1600,24 @@ class frontControllerApplication
 			$this->settings['administrators'] = 'administrators';
 		}
 		
-		# Add table name prefix if required
-		if ($this->settings['tablePrefix']) {
-			$this->settings['administrators'] = $this->settings['tablePrefix'] . $this->settings['administrators'];
+		# Split out database.table format if specified
+		$administratorsDatabase = $this->settings['database'];
+		$administratorsTable = $this->settings['administrators'];
+		if (substr_count ($this->settings['administrators'], '.')) {
+			list ($administratorsDatabase, $administratorsTable) = explode ('.', $this->settings['administrators'], 2);
 		}
 		
-		# Specify the database name; Postgres requires a schema rather than database
-		$dataPool = $this->settings['database'];
-		if ($this->settings['vendor'] == 'pgsql') {$dataPool = 'public';}	// #!# For now assume the current database and a schema 'public'
-
-		# Convert table to database.table
-		$administrators = $this->settings['administrators'];
-		if (!substr_count ($this->settings['administrators'], '.')) {
-			$administrators = "{$this->settings['database']}.{$this->settings['administrators']}";
-			$administratorsDataPool = "{$dataPool}.{$this->settings['administrators']}";
+		# Add table name prefix if required
+		if ($this->settings['tablePrefix']) {
+			$administratorsTable = $this->settings['tablePrefix'] . $administratorsTable;
 		}
 		
 		# Get the fieldnames
-		$fields = $this->databaseConnection->getFieldnames ($administratorsDataPool, $this->settings['administrators']);
+		$fields = $this->databaseConnection->getFieldnames ($administratorsDatabase, $administratorsTable);
 		
 		# Get the list of administrators
-		$query = "SELECT * FROM {$administratorsDataPool}" . (in_array ('active', $fields) ? " WHERE (active = 'Y' OR active = 'Yes')" : '') . ';';
-		if (!$administrators = $this->databaseConnection->getData ($query, $administrators)) {
+		$whereString = (in_array ('active', $fields) ? "LEFT(CAST(active AS CHAR), 1) = 'Y'" : '');		// 'Yes' or 'Y', cross-platform support; cannot use IN() as PostgreSQL complains about non-existent ENUM values
+		if (!$administrators = $this->databaseConnection->select ($administratorsDatabase, $administratorsTable, $whereString)) {
 			return false;
 		}
 		
@@ -2860,12 +2852,8 @@ class frontControllerApplication
 			# Add in fixed data
 			$result['id'] = 1;
 			
-			# Specify the database name; Postgres requires a schema rather than database
-			$dataPool = $this->settings['database'];
-			if ($this->settings['vendor'] == 'pgsql') {$dataPool = 'public';}	// #!# For now assume the current database and a schema 'public'
-			
 			# Determine if the settings row is already present
-			$alreadyPresent = $this->databaseConnection->getTotal ($dataPool, $this->settings['settingsTable']);
+			$alreadyPresent = $this->databaseConnection->getTotal ($this->settings['database'], $this->settings['settingsTable']);
 			
 			# Insert/update the data; insert with ON DUPLICATE KEY is not used due to incompatibility with PostgreSQL
 			if ($alreadyPresent) {
@@ -3122,12 +3110,8 @@ class frontControllerApplication
 		# Start the HTML
 		$html  = '';
 		
-		# Specify the database name; Postgres requires a schema rather than database
-		$dataPool = $this->settings['database'];
-		if ($this->settings['vendor'] == 'pgsql') {$dataPool = 'public';}	// #!# For now assume the current database and a schema 'public'
-		
 		# Insert the data
-		if ($this->databaseConnection->insert ($dataPool, $this->settings['administrators'], $result)) {
+		if ($this->databaseConnection->insert ($this->settings['database'], $this->settings['administrators'], $result)) {
 			
 			# Deal with variance in the fieldnames
 			$result['email'] = (isSet ($result['email']) ? $result['email'] : $result[$usernameField] . (substr_count ($result[$usernameField], '@') ? '' : "@{$this->settings['emailDomain']}"));
@@ -3161,10 +3145,6 @@ class frontControllerApplication
 		$html  = "\n<div class=\"{$boxClass}\">";
 		$html .= "\n<h3 id=\"remove\">Remove an administrator</h3>";
 		
-		# Specify the database name; Postgres requires a schema rather than database
-		$dataPool = $this->settings['database'];
-		if ($this->settings['vendor'] == 'pgsql') {$dataPool = 'public';}	// #!# For now assume the current database and a schema 'public'
-		
 		$administrators = $this->administrators;
 		//unset ($administrators[$this->user]);	// Remove current user - you can't delete yourself
 		#!# Should be changed so that there is always one admin, but that inactive admins can always be removed
@@ -3195,7 +3175,7 @@ class frontControllerApplication
 			if ($result = $form->process ($html)) {
 				
 				# Delete the entry
-				if ($this->databaseConnection->delete ($dataPool, $this->settings['administrators'], array ($usernameField => $result[$usernameField]))) {
+				if ($this->databaseConnection->delete ($this->settings['database'], $this->settings['administrators'], array ($usernameField => $result[$usernameField]))) {
 					$html .= "\n<p>" . htmlspecialchars ($result[$usernameField]) . " is no longer as an administrator. <a href=\"\">Reset page.</a></p>";
 					$this->administrators = $this->getAdministrators ();
 					
