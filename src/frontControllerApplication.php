@@ -532,7 +532,7 @@ class frontControllerApplication
 		# Load jQuery if required
 		if (!$this->exportType) {
 			if ($this->settings['jQuery']) {
-				$this->html .= "\n\n\n<!-- jQuery -->\n" . '<script type="text/javascript" src="//code.jquery.com/jquery.min.js"></script>' . "\n\n";
+				$this->html .= "\n\n\n<!-- jQuery -->\n" . '<script src="//code.jquery.com/jquery.min.js"></script>' . "\n\n";
 			}
 		}
 		
@@ -542,7 +542,7 @@ class frontControllerApplication
 				$stylesheet = $this->applicationRoot . $this->settings['applicationStylesheet'];
 				if (is_readable ($stylesheet)) {
 					$styles = file_get_contents ($stylesheet);
-					$this->html .= "\n\n" . '<style type="text/css">' . "\n\t" . str_replace ("\n", "\n\t", trim ($styles)) . "\n</style>\n";
+					$this->html .= "\n\n" . '<style>' . "\n\t" . str_replace ("\n", "\n\t", trim ($styles)) . "\n</style>\n";
 				}
 			}
 		}
